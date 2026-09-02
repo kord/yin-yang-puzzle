@@ -1,7 +1,5 @@
 import Logic from "logic-solver";
-import type { Extension, Location, YinYangPuzzlePartialDefinition, YinYangPuzzleSolution } from "./types";
-
-const USE_ONLY_BASIC_RULES = false;
+import type { Extension, GridPossibility, Location, YinYangPuzzlePartialDefinition, YinYangPuzzleSolution } from "./types";
 
 class YYSolver {
     private puzzle: YinYangPuzzlePartialDefinition
@@ -10,13 +8,11 @@ class YYSolver {
     constructor(puzzle: YinYangPuzzlePartialDefinition) {
         this.puzzle = puzzle;
         this.solver = new Logic.Solver();
-        this.addBasicConstraints();
-        this.addConnectivityConstraints();
-        if (!USE_ONLY_BASIC_RULES) {
-            this.addCuttingConstraints();
-            this.addBorderConstraint();
-        }
         this.addFixedCells();
+        this.addBasicConstraints();
+        this.addCuttingConstraints();
+        this.addBorderConstraint();
+        this.addConnectivityConstraints();
     }
 
     private getCellVar(row: number, col: number): string {
@@ -207,57 +203,60 @@ class YYSolver {
     }
 
     public extensions(): Extension {
-        let extensions: Extension = {
-            size: this.puzzle.size,
-            possibilities: Array.from({ length: this.puzzle.size.height }, () => Array(this.puzzle.size.width).fill({ fixed: false, blackPossible: false, whitePossible: false }))
-        };
-        const possibilities = extensions.possibilities;
+        const { height, width } = this.puzzle.size;
+        const possibilities: GridPossibility[][] = Array.from({ length: height }, () =>
+            Array.from({ length: width }, () => ({ fixed: false, blackPossible: false, whitePossible: false }))
+        );
 
-        // Set the fixed components in the possibilities grid based on the puzzle's fixed whites and blacks
+        // Fixed (given) cells.
         this.puzzle.fixedWhites.forEach((row, r) => {
             row.forEach((isWhite, c) => {
-                if (isWhite) {
-                    possibilities[r][c] = { fixed: true, blackPossible: false, whitePossible: true };
-                }
+                if (isWhite) possibilities[r][c] = { fixed: true, blackPossible: false, whitePossible: true };
             });
         });
         this.puzzle.fixedBlacks.forEach((row, r) => {
             row.forEach((isBlack, c) => {
-                if (isBlack) {
-                    possibilities[r][c] = { fixed: true, blackPossible: true, whitePossible: false };
-                }
+                if (isBlack) possibilities[r][c] = { fixed: true, blackPossible: true, whitePossible: false };
             });
         });
 
-        // Test each non-fixed square for whether it may potentially be white or black
-        for (let row = 0; row < this.puzzle.size.height; row++) {
-            for (let col = 0; col < this.puzzle.size.width; col++) {
-                // Solver currently only has the requirements put up in the puzzle definition given to us, so 
-                // we add more constraints and see if they work.
-                const currentPoss = possibilities[row][col];
-                if (currentPoss.fixed || (currentPoss.whitePossible && currentPoss.blackPossible)) continue;
+        // Record both colour possibilities from a full assignment.
+        const apply = (solution: Logic.Solution) => {
+            const whites = new Set(solution.getTrueVars());
+            for (let r = 0; r < height; r++) {
+                for (let c = 0; c < width; c++) {
+                    const poss = possibilities[r][c];
+                    if (poss.fixed) continue;
+                    if (whites.has(this.getCellVar(r, c))) poss.whitePossible = true;
+                    else poss.blackPossible = true;
+                }
+            }
+        };
 
-                const whiteSolution = this.solver.solveAssuming(this.getCellVar(row, col));
-                const blackSolution = this.solver.solveAssuming(Logic.not(this.getCellVar(row, col)));
-                const canBeWhite = whiteSolution !== null;
-                const canBeBlack = blackSolution !== null;
-                currentPoss.whitePossible = canBeWhite;
-                currentPoss.blackPossible = canBeBlack;
-                whiteSolution?.getTrueVars().forEach((varName) => {
-                    const loc = this.getVarLoc(varName);
-                    if (loc) {
-                        possibilities[loc.row][loc.col].whitePossible = true;
-                    }
-                });
-                blackSolution?.getTrueVars().forEach((varName) => {
-                    const loc = this.getVarLoc(varName);
-                    if (loc) {
-                        possibilities[loc.row][loc.col].blackPossible = true;
-                    }
-                });
+        // Seed from any one solution: every cell then already knows one colour
+        // it can take, so we only ever need to test the *other* colour.
+        const seed = this.solver.solve();
+        if (seed) apply(seed);
+
+        // For each cell, resolve only the possibility we haven't established yet.
+        for (let r = 0; r < height; r++) {
+            for (let c = 0; c < width; c++) {
+                const poss = possibilities[r][c];
+                if (poss.fixed || (poss.whitePossible && poss.blackPossible)) continue;
+
+                if (poss.whitePossible) {
+                    // Only white known; test whether black is possible.
+                    const solution = this.solver.solveAssuming(Logic.not(this.getCellVar(r, c)));
+                    if (solution) apply(solution);
+                } else if (poss.blackPossible) {
+                    // Only black known; test whether white is possible.
+                    const solution = this.solver.solveAssuming(this.getCellVar(r, c));
+                    if (solution) apply(solution);
+                }
             }
         }
-        return extensions;
+
+        return { size: this.puzzle.size, possibilities };
     }
 }
 

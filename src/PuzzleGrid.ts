@@ -74,6 +74,7 @@ export class PuzzleGrid {
 
     private readonly states = new Map<string, ElementState>()
     private readonly readonlyCells = new Set<string>()
+    private readonly inferredCells = new Set<string>()
     private readonly elements = new Map<string, SVGGElement>()
     private readonly xOverlays = new Map<string, SVGGElement>()
 
