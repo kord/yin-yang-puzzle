@@ -5,7 +5,7 @@ import YYSolver from './YYSolver';
 
 
 
-function validatePuzzle(puzzle: YinYangPuzzlePartialDefinition): YinYangPuzzleDefinition | null {
+function validateUniquePuzzle(puzzle: YinYangPuzzlePartialDefinition): YinYangPuzzleDefinition | null {
     const s = new YYSolver(puzzle);
     const soln = s.uniqueSolution();
     if (soln) {
@@ -18,4 +18,4 @@ function validatePuzzle(puzzle: YinYangPuzzlePartialDefinition): YinYangPuzzleDe
     return null;
 }
 
-export { validatePuzzle };
+export { validateUniquePuzzle };

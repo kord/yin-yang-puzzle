@@ -11,21 +11,31 @@ function App() {
     if (!container) return
 
     const grid = new PuzzleGrid({
-      rows: 5,
-      cols: 5,
-      innerGap: 10,
+      rows: 6,
+      cols: 6,
+      kinds: { square: true, edge: false, vertex: false },
+      paintCycle: { square: ['activated', 'inactivated'] },
       onStateChange: (ref, state) => {
         if (statusRef.current) {
-          const label = ref.orientation ? `${ref.kind} (${ref.orientation})` : ref.kind
-          statusRef.current.textContent = `${label} @ (${ref.row},${ref.col}) → ${state}`
+          statusRef.current.textContent = `(${ref.row},${ref.col}) → ${state}`
         }
       },
     })
 
-    // A few elements are defined by the puzzle, so they are immutable.
-    grid.setState({ kind: 'square', row: 2, col: 2 }, 'fixed')
-    grid.setState({ kind: 'edge', row: 2, col: 2, orientation: 'horizontal' }, 'fixed')
-    grid.setState({ kind: 'vertex', row: 2, col: 2 }, 'fixed')
+    // Parse the 6x6 puzzle definition.
+    //   'w' = fixed white, 'b' = fixed black, 'x' = a cell the user fills in.
+    const PUZZLE = 'xxxxxb/xxwxxw/xxxxwx/xxwxxx/xwxbxx/xxxxxx'
+    PUZZLE.split('/').forEach((rowStr, row) => {
+      rowStr.split('').forEach((ch, col) => {
+        if (ch === 'w') {
+          grid.setState({ kind: 'square', row, col }, 'inactivated')
+          grid.setReadonly({ kind: 'square', row, col })
+        } else if (ch === 'b') {
+          grid.setState({ kind: 'square', row, col }, 'activated')
+          grid.setReadonly({ kind: 'square', row, col })
+        }
+      })
+    })
 
     grid.mount(container)
 
@@ -42,22 +52,21 @@ function App() {
         <aside className="app__panel">
           <h2 className="app__heading">Controls</h2>
           <p className="app__text">
-            <strong>Left-drag</strong> to paint. Elements cycle through
+            <strong>Left-drag</strong> to fill cells, cycling
             <br />
-            <code className="app__code">activated → inactivated → x → untouched</code>.
+            <code className="app__code">black → white</code>.
           </p>
           <p className="app__text">
             <strong>Right-drag</strong> (or <kbd className="app__key">Ctrl</kbd>/<kbd className="app__key">Shift</kbd>+click)
-            erases back to <code className="app__code">untouched</code>.
+            clears back to <code className="app__code">empty</code>.
           </p>
 
           <h2 className="app__heading">Legend</h2>
           <ul className="app__legend">
-            <li className="app__legend-item"><span className="app__swatch app__swatch--untouched" /> untouched</li>
-            <li className="app__legend-item"><span className="app__swatch app__swatch--activated" /> activated</li>
-            <li className="app__legend-item"><span className="app__swatch app__swatch--inactivated" /> inactivated</li>
-            <li className="app__legend-item"><span className="app__swatch app__swatch--x" /> x</li>
-            <li className="app__legend-item"><span className="app__swatch app__swatch--fixed" /> fixed (immutable)</li>
+            <li className="app__legend-item"><span className="app__swatch app__swatch--untouched" /> empty</li>
+            <li className="app__legend-item"><span className="app__swatch app__swatch--activated" /> black</li>
+            <li className="app__legend-item"><span className="app__swatch app__swatch--inactivated" /> white</li>
+            <li className="app__legend-item"><span className="app__swatch app__swatch--given" /> given (locked)</li>
           </ul>
 
           <h2 className="app__heading">Last change</h2>

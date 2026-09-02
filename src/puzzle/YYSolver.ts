@@ -48,17 +48,6 @@ class YYSolver {
         }
     }
 
-    private addBasicConstraints() {
-        // Implementation for adding basic constraints to the solver
-        this.forbidBlock([true, true, true, true]); // Forbid all white block
-        this.forbidBlock([false, false, false, false]); // Forbid all black block
-    }
-
-    private addCuttingConstraints() {
-        this.forbidBlock([true, false, true, false]); // Forbid checkerboard pattern
-        this.forbidBlock([false, true, false, true]); // Forbid checkerboard pattern
-    }
-
     private addFixedCells() {
         // Implementation for adding fixed cells to the solver
         for (let row = 0; row < this.puzzle.size.height; row++) {
@@ -70,6 +59,17 @@ class YYSolver {
                 }
             }
         }
+    }
+
+    private addBasicConstraints() {
+        // Implementation for adding basic constraints to the solver
+        this.forbidBlock([true, true, true, true]); // Forbid all white block
+        this.forbidBlock([false, false, false, false]); // Forbid all black block
+    }
+
+    private addCuttingConstraints() {
+        this.forbidBlock([true, false, true, false]); // Forbid checkerboard pattern
+        this.forbidBlock([false, true, false, true]); // Forbid checkerboard pattern
     }
 
     public logicSolutionToYinYangSolution(solution: Logic.Solution): YinYangPuzzleSolution {

@@ -39,7 +39,7 @@ export interface PuzzleGridOptions {
     cols: number
     /** Size of a cell in SVG user units. Default 64. */
     cellSize?: number
-    /** Gap around each square tile. Default 4. */
+    /** Gap around each square tile. Default 0 (squares are flush with grid lines). */
     innerGap?: number
     /** Per-kind default state when no state has been assigned. Default `untouched`. */
     defaultState?: Partial<Record<ElementKind, ElementState>>
@@ -47,6 +47,11 @@ export interface PuzzleGridOptions {
     paintCycle?: Partial<Record<ElementKind, ElementState[]>>
     /** Per-kind flag that locks an entire kind against painting. */
     immutable?: Partial<Record<ElementKind, boolean>>
+    /**
+     * Which element kinds are rendered and interactive. Omitted kinds default to
+     * `true`. Set a kind to `false` to hide it entirely (e.g. a cell-only puzzle).
+     */
+    kinds?: Partial<Record<ElementKind, boolean>>
     /** Called whenever an element's state changes. */
     onStateChange?: (ref: ElementRef, state: ElementState) => void
 }
@@ -64,9 +69,11 @@ export class PuzzleGrid {
     private readonly defaultState: Record<ElementKind, ElementState>
     private readonly paintCycle: Record<ElementKind, ElementState[]>
     private readonly immutableMap: Record<ElementKind, boolean>
+    private readonly visibleKinds: Record<ElementKind, boolean>
     private readonly onStateChange?: (ref: ElementRef, state: ElementState) => void
 
     private readonly states = new Map<string, ElementState>()
+    private readonly readonlyCells = new Set<string>()
     private readonly elements = new Map<string, SVGGElement>()
     private readonly xOverlays = new Map<string, SVGGElement>()
 
@@ -95,6 +102,11 @@ export class PuzzleGrid {
             square: options.immutable?.square ?? false,
             edge: options.immutable?.edge ?? false,
             vertex: options.immutable?.vertex ?? false,
+        }
+        this.visibleKinds = {
+            square: options.kinds?.square ?? true,
+            edge: options.kinds?.edge ?? true,
+            vertex: options.kinds?.vertex ?? true,
         }
         this.onStateChange = options.onStateChange
     }
@@ -142,6 +154,18 @@ export class PuzzleGrid {
         this.onStateChange?.(ref, state)
     }
 
+    /** Lock an element so painting cannot change it (used for given/clue cells). */
+    setReadonly(ref: ElementRef, readonly = true): void {
+        const id = this.elementId(ref)
+        if (readonly) this.readonlyCells.add(id)
+        else this.readonlyCells.delete(id)
+        this.updateElement(id, this.getState(ref))
+    }
+
+    getReadonly(ref: ElementRef): boolean {
+        return this.readonlyCells.has(this.elementId(ref))
+    }
+
     /** Reset every element back to its kind's default state. */
     reset(): void {
         const ids = [...this.states.keys()]
@@ -179,17 +203,23 @@ export class PuzzleGrid {
         this.elements.clear()
         this.xOverlays.clear()
 
-        const squares = this.createLayer('puzzle-grid__squares')
-        const edges = this.createLayer('puzzle-grid__edges')
-        const vertices = this.createLayer('puzzle-grid__vertices')
+        if (this.visibleKinds.square) {
+            this.appendStoneDefs(svg)
+            const squares = this.createLayer('puzzle-grid__squares')
+            this.buildSquares(squares)
+            svg.appendChild(squares)
+        }
+        if (this.visibleKinds.edge) {
+            const edges = this.createLayer('puzzle-grid__edges')
+            this.buildEdges(edges)
+            svg.appendChild(edges)
+        }
+        if (this.visibleKinds.vertex) {
+            const vertices = this.createLayer('puzzle-grid__vertices')
+            this.buildVertices(vertices)
+            svg.appendChild(vertices)
+        }
 
-        this.buildSquares(squares)
-        this.buildEdges(edges)
-        this.buildVertices(vertices)
-
-        svg.appendChild(squares)
-        svg.appendChild(edges)
-        svg.appendChild(vertices)
         container.appendChild(svg)
 
         svg.addEventListener('pointerdown', this.onPointerDown)
@@ -217,6 +247,33 @@ export class PuzzleGrid {
 
     private createLayer(className: string): SVGGElement {
         return this.createSvgEl('g', { class: className }) as SVGGElement
+    }
+
+    /** Add radial gradients that give the stones their glossy go-stone look. */
+    private appendStoneDefs(svg: SVGSVGElement): void {
+        const defs = this.createSvgEl('defs', {}) as SVGDefsElement
+        defs.appendChild(this.createGradient('pg-black-stone', '#5a5a5a', '#000000'))
+        defs.appendChild(this.createGradient('pg-white-stone', '#ffffff', '#e2e2e2'))
+        svg.appendChild(defs)
+    }
+
+    private createGradient(id: string, from: string, to: string): SVGGradientElement {
+        const gradient = this.createSvgEl('radialGradient', {
+            id,
+            cx: '35%',
+            cy: '35%',
+            r: '75%',
+        }) as SVGGradientElement
+        gradient.appendChild(this.createStop(from, '0%'))
+        gradient.appendChild(this.createStop(to, '100%'))
+        return gradient
+    }
+
+    private createStop(color: string, offset: string): SVGStopElement {
+        return this.createSvgEl('stop', {
+            'stop-color': color,
+            offset,
+        }) as SVGStopElement
     }
 
     private createSvgEl(tag: string, attrs: Record<string, string>): SVGElement {
@@ -257,16 +314,27 @@ export class PuzzleGrid {
                 const h = s - gap
 
                 const g = this.createGroup(ref)
-                const rect = this.createSvgEl('rect', {
-                    class: 'puzzle-grid__shape',
+
+                // Cell background (board). Given cells get a gray backdrop via CSS.
+                g.appendChild(this.createSvgEl('rect', {
+                    class: 'puzzle-grid__cell-bg',
                     x: String(x),
                     y: String(y),
                     width: String(w),
                     height: String(h),
-                    rx: '2',
-                })
-                g.appendChild(rect)
-                g.appendChild(this.buildXOverlay(x + w / 2, y + h / 2, Math.min(w, h) / 2 * 0.7))
+                }))
+
+                // The stone, rendered as a glossy circle.
+                const cx = x + w / 2
+                const cy = y + h / 2
+                const radius = Math.min(w, h) / 2 * 0.78
+                g.appendChild(this.createSvgEl('circle', {
+                    class: 'puzzle-grid__shape',
+                    cx: String(cx),
+                    cy: String(cy),
+                    r: String(radius),
+                }))
+                g.appendChild(this.buildXOverlay(cx, cy, radius * 0.7))
                 layer.appendChild(g)
                 this.register(ref, g)
             }
@@ -402,7 +470,8 @@ export class PuzzleGrid {
         const orientationClass =
             kind === 'edge' ? ` ${kindClass}--${orientation}` : ''
         const stateClass = state === 'untouched' ? '' : ` ${kindClass}--${state}`
-        return `${kindClass}${orientationClass}${stateClass}`
+        const givenClass = this.readonlyCells.has(id) ? ` ${kindClass}--given` : ''
+        return `${kindClass}${orientationClass}${stateClass}${givenClass}`
     }
 
     // -------------------------------------------------------------------------
@@ -446,7 +515,9 @@ export class PuzzleGrid {
     }
 
     private isImmutable(ref: ElementRef): boolean {
+        const id = this.elementId(ref)
         if (this.immutableMap[ref.kind]) return true
+        if (this.readonlyCells.has(id)) return true
         return this.getState(ref) === 'fixed'
     }
 

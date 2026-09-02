@@ -102,6 +102,20 @@
   border-color: #d4a017;
 }
 
+.app__swatch--given {
+  background: #d5d5d5;
+  border-color: #a9a9a9;
+  position: relative;
+}
+
+.app__swatch--given::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: #1a1a1a;
+}
+
 .app__status {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;

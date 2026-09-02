@@ -2,8 +2,10 @@
  * PuzzleGrid (BEM)
  *   Block: .puzzle-grid
  *   Element: .puzzle-grid__<kind>   (square | edge | vertex)
- *   Element: .puzzle-grid__shape, .puzzle-grid__hit-area, .puzzle-grid__cross
+ *   Element: .puzzle-grid__cell-bg, .puzzle-grid__shape,
+ *            .puzzle-grid__hit-area, .puzzle-grid__cross
  *   Modifier: .puzzle-grid__<kind>--<state>
+ *   Modifier: .puzzle-grid__<kind>--given  (locked/clue cells → gray backdrop)
  *   Modifier: .puzzle-grid__edge--<orientation>
  * ------------------------------------------------------------------------- */
 .puzzle-grid {
@@ -19,6 +21,19 @@
 .puzzle-grid__shape {
     pointer-events: all;
     transition: fill 0.1s ease, stroke 0.1s ease;
+}
+
+/* Cell background (the "board" behind a square). */
+.puzzle-grid__cell-bg {
+    pointer-events: all;
+    fill: transparent;
+    stroke: #000000;
+    stroke-width: 1.5;
+}
+
+/* Given (fixed/clue) cells show a gray backdrop to distinguish them. */
+.puzzle-grid__square--given .puzzle-grid__cell-bg {
+    fill: #d5d5d5;
 }
 
 .puzzle-grid__edge .puzzle-grid__shape {
@@ -37,18 +52,19 @@
 /* Squares */
 .puzzle-grid__square .puzzle-grid__shape {
     fill: transparent;
-    stroke: #d0d0d0;
-    stroke-width: 1.5;
+    stroke: none;
 }
 
 .puzzle-grid__square--activated .puzzle-grid__shape {
-    fill: #1a1a1a;
+    fill: url(#pg-black-stone);
     stroke: #1a1a1a;
+    stroke-width: 1;
 }
 
 .puzzle-grid__square--inactivated .puzzle-grid__shape {
-    fill: #eaeaea;
-    stroke: #b0b0b0;
+    fill: url(#pg-white-stone);
+    stroke: #c9c9c9;
+    stroke-width: 1;
 }
 
 .puzzle-grid__square--x .puzzle-grid__shape {
@@ -57,7 +73,7 @@
 }
 
 .puzzle-grid__square--fixed .puzzle-grid__shape {
-    fill: #fff6d6;
+    fill: url(#pg-white-stone);
     stroke: #d4a017;
     stroke-width: 2.5;
 }
