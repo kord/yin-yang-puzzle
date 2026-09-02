@@ -80,12 +80,15 @@
 .sw-untouched {
   background: transparent;
 }
+
 .sw-activated {
   background: #1a1a1a;
 }
+
 .sw-inactivated {
   background: #eaeaea;
 }
+
 .sw-x {
   background: #fff;
   border-color: #c00000;
@@ -93,6 +96,7 @@
     linear-gradient(45deg, transparent 44%, #c00000 44%, #c00000 56%, transparent 56%),
     linear-gradient(-45deg, transparent 44%, #c00000 44%, #c00000 56%, transparent 56%);
 }
+
 .sw-fixed {
   background: #fff6d6;
   border-color: #d4a017;
@@ -108,4 +112,3 @@
   padding: 6px 8px;
   min-height: 18px;
 }
-
