@@ -69,7 +69,6 @@ export class PuzzleGrid {
   private readonly xOverlays = new Map<string, SVGGElement>()
 
   private svg: SVGSVGElement | null = null
-  private container: HTMLElement | null = null
 
   private painting = false
   private paintState: ElementState = 'untouched'
@@ -79,7 +78,7 @@ export class PuzzleGrid {
     this.rows = options.rows
     this.cols = options.cols
     this.cellSize = options.cellSize ?? 64
-    this.innerGap = options.innerGap ?? 4
+    this.innerGap = options.innerGap ?? 0
     this.defaultState = {
       square: options.defaultState?.square ?? DEFAULT_STATE,
       edge: options.defaultState?.edge ?? DEFAULT_STATE,
@@ -166,7 +165,6 @@ export class PuzzleGrid {
 
   mount(container: HTMLElement): void {
     this.destroy()
-    this.container = container
 
     const svg = document.createElementNS(SVG_NS, 'svg')
     svg.setAttribute('class', 'puzzle-grid')
@@ -209,7 +207,6 @@ export class PuzzleGrid {
     window.removeEventListener('pointerup', this.onPointerUp)
     this.painting = false
     this.lastPaintedId = null
-    this.container = null
   }
 
   // -------------------------------------------------------------------------

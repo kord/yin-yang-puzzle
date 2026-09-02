@@ -1,1 +1,111 @@
-/* App.css is intentionally empty — the starter boilerplate was removed. */
+.app {
+  padding: 24px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.puzzle-layout {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 24px;
+}
+
+.puzzle-mount {
+  padding: 8px;
+}
+
+.puzzle-panel {
+  font-family: var(--sans, system-ui, 'Segoe UI', Roboto, sans-serif);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 260px;
+  min-width: 240px;
+}
+
+.puzzle-panel h2 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 20px 0 8px;
+  color: #666;
+}
+
+.puzzle-panel p {
+  margin: 6px 0;
+}
+
+.puzzle-panel code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  background: #f0f0f0;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.puzzle-panel kbd {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0 4px;
+  background: #fafafa;
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sw {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid #bbb;
+  flex: 0 0 auto;
+}
+
+.sw-untouched {
+  background: transparent;
+}
+.sw-activated {
+  background: #1a1a1a;
+}
+.sw-inactivated {
+  background: #eaeaea;
+}
+.sw-x {
+  background: #fff;
+  border-color: #c00000;
+  background-image:
+    linear-gradient(45deg, transparent 44%, #c00000 44%, #c00000 56%, transparent 56%),
+    linear-gradient(-45deg, transparent 44%, #c00000 44%, #c00000 56%, transparent 56%);
+}
+.sw-fixed {
+  background: #fff6d6;
+  border-color: #d4a017;
+}
+
+.status {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  color: #333;
+  background: #fafafa;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 6px 8px;
+  min-height: 18px;
+}
+
