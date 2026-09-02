@@ -13,6 +13,7 @@ function App() {
     const grid = new PuzzleGrid({
       rows: 5,
       cols: 5,
+      innerGap: 10,
       onStateChange: (ref, state) => {
         if (statusRef.current) {
           const label = ref.orientation ? `${ref.kind} (${ref.orientation})` : ref.kind
@@ -35,32 +36,32 @@ function App() {
     <div className="app">
       <h1>Yin Yang Puzzle</h1>
 
-      <div className="puzzle-layout">
-        <div ref={containerRef} className="puzzle-mount" />
+      <div className="app__layout">
+        <div ref={containerRef} className="app__grid" />
 
-        <aside className="puzzle-panel">
-          <h2>Controls</h2>
-          <p>
+        <aside className="app__panel">
+          <h2 className="app__heading">Controls</h2>
+          <p className="app__text">
             <strong>Left-drag</strong> to paint. Elements cycle through
             <br />
-            <code>activated → inactivated → x → untouched</code>.
+            <code className="app__code">activated → inactivated → x → untouched</code>.
           </p>
-          <p>
-            <strong>Right-drag</strong> (or <kbd>Ctrl</kbd>/<kbd>Shift</kbd>+click)
-            erases back to <code>untouched</code>.
+          <p className="app__text">
+            <strong>Right-drag</strong> (or <kbd className="app__key">Ctrl</kbd>/<kbd className="app__key">Shift</kbd>+click)
+            erases back to <code className="app__code">untouched</code>.
           </p>
 
-          <h2>Legend</h2>
-          <ul className="legend">
-            <li><span className="sw sw-untouched" /> untouched</li>
-            <li><span className="sw sw-activated" /> activated</li>
-            <li><span className="sw sw-inactivated" /> inactivated</li>
-            <li><span className="sw sw-x" /> x</li>
-            <li><span className="sw sw-fixed" /> fixed (immutable)</li>
+          <h2 className="app__heading">Legend</h2>
+          <ul className="app__legend">
+            <li className="app__legend-item"><span className="app__swatch app__swatch--untouched" /> untouched</li>
+            <li className="app__legend-item"><span className="app__swatch app__swatch--activated" /> activated</li>
+            <li className="app__legend-item"><span className="app__swatch app__swatch--inactivated" /> inactivated</li>
+            <li className="app__legend-item"><span className="app__swatch app__swatch--x" /> x</li>
+            <li className="app__legend-item"><span className="app__swatch app__swatch--fixed" /> fixed (immutable)</li>
           </ul>
 
-          <h2>Last change</h2>
-          <p className="status"><span ref={statusRef}>—</span></p>
+          <h2 className="app__heading">Last change</h2>
+          <p className="app__status"><span ref={statusRef}>—</span></p>
         </aside>
       </div>
     </div>

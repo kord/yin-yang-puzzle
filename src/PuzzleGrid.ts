@@ -179,9 +179,9 @@ export class PuzzleGrid {
         this.elements.clear()
         this.xOverlays.clear()
 
-        const squares = this.createLayer('pg-squares')
-        const edges = this.createLayer('pg-edges')
-        const vertices = this.createLayer('pg-vertices')
+        const squares = this.createLayer('puzzle-grid__squares')
+        const edges = this.createLayer('puzzle-grid__edges')
+        const vertices = this.createLayer('puzzle-grid__vertices')
 
         this.buildSquares(squares)
         this.buildEdges(edges)
@@ -228,8 +228,11 @@ export class PuzzleGrid {
     }
 
     private createGroup(ref: ElementRef): SVGGElement {
+        const kindClass = `puzzle-grid__${ref.kind}`
+        const orientationClass =
+            ref.kind === 'edge' ? ` puzzle-grid__edge--${ref.orientation ?? 'horizontal'}` : ''
         const g = this.createSvgEl('g', {
-            class: `pg-element pg-${ref.kind}`,
+            class: `${kindClass}${orientationClass}`,
             'data-kind': ref.kind,
             'data-row': String(ref.row),
             'data-col': String(ref.col),
@@ -255,7 +258,7 @@ export class PuzzleGrid {
 
                 const g = this.createGroup(ref)
                 const rect = this.createSvgEl('rect', {
-                    class: 'pg-shape',
+                    class: 'puzzle-grid__shape',
                     x: String(x),
                     y: String(y),
                     width: String(w),
@@ -285,11 +288,11 @@ export class PuzzleGrid {
 
                 const g = this.createGroup(ref)
                 g.appendChild(this.createSvgEl('line', {
-                    class: 'pg-shape',
+                    class: 'puzzle-grid__shape',
                     x1: String(x1), y1: String(y1), x2: String(x2), y2: String(y2),
                 }))
                 g.appendChild(this.createSvgEl('line', {
-                    class: 'pg-hit',
+                    class: 'puzzle-grid__hit-area',
                     x1: String(x1), y1: String(y1), x2: String(x2), y2: String(y2),
                     stroke: 'transparent',
                     'stroke-width': String(hitWidth),
@@ -311,11 +314,11 @@ export class PuzzleGrid {
 
                 const g = this.createGroup(ref)
                 g.appendChild(this.createSvgEl('line', {
-                    class: 'pg-shape',
+                    class: 'puzzle-grid__shape',
                     x1: String(x1), y1: String(y1), x2: String(x2), y2: String(y2),
                 }))
                 g.appendChild(this.createSvgEl('line', {
-                    class: 'pg-hit',
+                    class: 'puzzle-grid__hit-area',
                     x1: String(x1), y1: String(y1), x2: String(x2), y2: String(y2),
                     stroke: 'transparent',
                     'stroke-width': String(hitWidth),
@@ -337,7 +340,7 @@ export class PuzzleGrid {
 
                 const g = this.createGroup(ref)
                 g.appendChild(this.createSvgEl('circle', {
-                    class: 'pg-shape',
+                    class: 'puzzle-grid__shape',
                     cx: String(cx),
                     cy: String(cy),
                     r: String(radius),
@@ -350,16 +353,16 @@ export class PuzzleGrid {
     }
 
     private buildXOverlay(cx: number, cy: number, half: number): SVGGElement {
-        const g = this.createSvgEl('g', { class: 'pg-x' }) as SVGGElement
+        const g = this.createSvgEl('g', { class: 'puzzle-grid__cross' }) as SVGGElement
         const d = half
         g.appendChild(this.createSvgEl('line', {
-            class: 'pg-x-line',
+            class: 'puzzle-grid__cross-line',
             x1: String(cx - d), y1: String(cy - d),
             x2: String(cx + d), y2: String(cy + d),
             'vector-effect': 'non-scaling-stroke',
         }))
         g.appendChild(this.createSvgEl('line', {
-            class: 'pg-x-line',
+            class: 'puzzle-grid__cross-line',
             x1: String(cx + d), y1: String(cy - d),
             x2: String(cx - d), y2: String(cy + d),
             'vector-effect': 'non-scaling-stroke',
@@ -371,7 +374,7 @@ export class PuzzleGrid {
     private register(ref: ElementRef, g: SVGGElement): void {
         const id = this.elementId(ref)
         this.elements.set(id, g)
-        const xo = g.querySelector(':scope > .pg-x') as SVGGElement | null
+        const xo = g.querySelector(':scope > .puzzle-grid__cross') as SVGGElement | null
         if (xo) this.xOverlays.set(id, xo)
         this.updateElement(id, this.getState(ref))
     }
@@ -379,9 +382,27 @@ export class PuzzleGrid {
     private updateElement(id: string, state: ElementState): void {
         const g = this.elements.get(id)
         if (!g) return
+        g.setAttribute('class', this.classFor(id, state))
         g.setAttribute('data-state', state)
         const xo = this.xOverlays.get(id)
         if (xo) xo.style.display = state === 'x' ? '' : 'none'
+    }
+
+    private kindFromId(id: string): { kind: ElementKind; orientation?: EdgeOrientation } {
+        if (id.startsWith('edge-')) {
+            return { kind: 'edge', orientation: id.startsWith('edge-v') ? 'vertical' : 'horizontal' }
+        }
+        if (id.startsWith('vertex')) return { kind: 'vertex' }
+        return { kind: 'square' }
+    }
+
+    private classFor(id: string, state: ElementState): string {
+        const { kind, orientation } = this.kindFromId(id)
+        const kindClass = `puzzle-grid__${kind}`
+        const orientationClass =
+            kind === 'edge' ? ` ${kindClass}--${orientation}` : ''
+        const stateClass = state === 'untouched' ? '' : ` ${kindClass}--${state}`
+        return `${kindClass}${orientationClass}${stateClass}`
     }
 
     // -------------------------------------------------------------------------
@@ -442,7 +463,7 @@ export class PuzzleGrid {
     }
 
     private refFromTarget(target: Element | null): ElementRef | null {
-        const el = target?.closest?.('.pg-element') as SVGGElement | null
+        const el = target?.closest?.('[data-kind]') as SVGGElement | null
         if (!el) return null
         const kind = el.getAttribute('data-kind') as ElementKind | null
         if (!kind) return null

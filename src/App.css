@@ -4,7 +4,7 @@
   margin: 0 auto;
 }
 
-.puzzle-layout {
+.app__layout {
   display: flex;
   gap: 32px;
   align-items: flex-start;
@@ -13,11 +13,11 @@
   margin-top: 24px;
 }
 
-.puzzle-mount {
+.app__grid {
   padding: 8px;
 }
 
-.puzzle-panel {
+.app__panel {
   font-family: var(--sans, system-ui, 'Segoe UI', Roboto, sans-serif);
   font-size: 14px;
   line-height: 1.5;
@@ -25,7 +25,7 @@
   min-width: 240px;
 }
 
-.puzzle-panel h2 {
+.app__heading {
   font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -33,29 +33,29 @@
   color: #666;
 }
 
-.puzzle-panel p {
+.app__text {
   margin: 6px 0;
 }
 
-.puzzle-panel code {
+.app__code {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
-  background: #f0f0f0;
+  background: #6e6666;
   padding: 1px 4px;
   border-radius: 4px;
 }
 
-.puzzle-panel kbd {
+.app__key {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
   border: 1px solid #ccc;
   border-bottom-width: 2px;
   border-radius: 4px;
   padding: 0 4px;
-  background: #fafafa;
+  background: #5f5858;
 }
 
-.legend {
+.app__legend {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -63,13 +63,13 @@
   gap: 6px;
 }
 
-.legend li {
+.app__legend-item {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.sw {
+.app__swatch {
   width: 18px;
   height: 18px;
   border-radius: 4px;
@@ -77,19 +77,19 @@
   flex: 0 0 auto;
 }
 
-.sw-untouched {
-  background: transparent;
+.app__swatch--untouched {
+  background: #ffffff;
 }
 
-.sw-activated {
+.app__swatch--activated {
   background: #1a1a1a;
 }
 
-.sw-inactivated {
+.app__swatch--inactivated {
   background: #eaeaea;
 }
 
-.sw-x {
+.app__swatch--x {
   background: #fff;
   border-color: #c00000;
   background-image:
@@ -97,12 +97,12 @@
     linear-gradient(-45deg, transparent 44%, #c00000 44%, #c00000 56%, transparent 56%);
 }
 
-.sw-fixed {
+.app__swatch--fixed {
   background: #fff6d6;
   border-color: #d4a017;
 }
 
-.status {
+.app__status {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
   color: #333;

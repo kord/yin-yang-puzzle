@@ -1,5 +1,10 @@
 /* -------------------------------------------------------------------------
- * PuzzleGrid — state styling. Appearance is driven entirely by data-state.
+ * PuzzleGrid (BEM)
+ *   Block: .puzzle-grid
+ *   Element: .puzzle-grid__<kind>   (square | edge | vertex)
+ *   Element: .puzzle-grid__shape, .puzzle-grid__hit-area, .puzzle-grid__cross
+ *   Modifier: .puzzle-grid__<kind>--<state>
+ *   Modifier: .puzzle-grid__edge--<orientation>
  * ------------------------------------------------------------------------- */
 .puzzle-grid {
     touch-action: none;
@@ -11,106 +16,107 @@
     border-radius: 8px;
 }
 
-.puzzle-grid .pg-shape {
+.puzzle-grid__shape {
     pointer-events: all;
+    transition: fill 0.1s ease, stroke 0.1s ease;
 }
 
-.puzzle-grid [data-kind='edge'] .pg-shape {
+.puzzle-grid__edge .puzzle-grid__shape {
     pointer-events: none;
-    /* hit line handles edge interaction */
+    /* the hit area handles edge interaction */
 }
 
-.puzzle-grid .pg-hit {
+.puzzle-grid__hit-area {
     pointer-events: stroke;
 }
 
-.puzzle-grid .pg-x {
+.puzzle-grid__cross {
     pointer-events: none;
 }
 
-/* Squared cells */
-.puzzle-grid [data-kind='square'] .pg-shape {
+/* Squares */
+.puzzle-grid__square .puzzle-grid__shape {
     fill: transparent;
     stroke: #d0d0d0;
     stroke-width: 1.5;
 }
 
-.puzzle-grid [data-kind='square'][data-state='activated'] .pg-shape {
+.puzzle-grid__square--activated .puzzle-grid__shape {
     fill: #1a1a1a;
     stroke: #1a1a1a;
 }
 
-.puzzle-grid [data-kind='square'][data-state='inactivated'] .pg-shape {
+.puzzle-grid__square--inactivated .puzzle-grid__shape {
     fill: #eaeaea;
     stroke: #b0b0b0;
 }
 
-.puzzle-grid [data-kind='square'][data-state='x'] .pg-shape {
+.puzzle-grid__square--x .puzzle-grid__shape {
     fill: #ffffff;
     stroke: #c00000;
 }
 
-.puzzle-grid [data-kind='square'][data-state='fixed'] .pg-shape {
+.puzzle-grid__square--fixed .puzzle-grid__shape {
     fill: #fff6d6;
     stroke: #d4a017;
     stroke-width: 2.5;
 }
 
 /* Edges */
-.puzzle-grid [data-kind='edge'] .pg-shape {
+.puzzle-grid__edge .puzzle-grid__shape {
     stroke: transparent;
     /* untouched edges are invisible */
     stroke-width: 2;
 }
 
-.puzzle-grid [data-kind='edge'][data-state='activated'] .pg-shape {
+.puzzle-grid__edge--activated .puzzle-grid__shape {
     stroke: #333333;
 }
 
-.puzzle-grid [data-kind='edge'][data-state='inactivated'] .pg-shape {
+.puzzle-grid__edge--inactivated .puzzle-grid__shape {
     stroke: #c9c9c9;
 }
 
-.puzzle-grid [data-kind='edge'][data-state='x'] .pg-shape {
+.puzzle-grid__edge--x .puzzle-grid__shape {
     stroke: transparent;
-    /* the X overlay carries the mark */
+    /* the cross mark carries the state */
 }
 
-.puzzle-grid [data-kind='edge'][data-state='fixed'] .pg-shape {
+.puzzle-grid__edge--fixed .puzzle-grid__shape {
     stroke: #d4a017;
     stroke-width: 2.5;
 }
 
 /* Vertices */
-.puzzle-grid [data-kind='vertex'] .pg-shape {
+.puzzle-grid__vertex .puzzle-grid__shape {
     fill: #e4e4e4;
     stroke: #9a9a9a;
     stroke-width: 1.5;
 }
 
-.puzzle-grid [data-kind='vertex'][data-state='activated'] .pg-shape {
+.puzzle-grid__vertex--activated .puzzle-grid__shape {
     fill: #1a1a1a;
     stroke: #1a1a1a;
 }
 
-.puzzle-grid [data-kind='vertex'][data-state='inactivated'] .pg-shape {
+.puzzle-grid__vertex--inactivated .puzzle-grid__shape {
     fill: #ffffff;
     stroke: #9a9a9a;
 }
 
-.puzzle-grid [data-kind='vertex'][data-state='x'] .pg-shape {
+.puzzle-grid__vertex--x .puzzle-grid__shape {
     fill: #ffffff;
     stroke: #c00000;
 }
 
-.puzzle-grid [data-kind='vertex'][data-state='fixed'] .pg-shape {
+.puzzle-grid__vertex--fixed .puzzle-grid__shape {
     fill: #fff6d6;
     stroke: #d4a017;
     stroke-width: 2;
 }
 
-/* X mark */
-.puzzle-grid .pg-x-line {
+/* Cross (x) mark */
+.puzzle-grid__cross-line {
     stroke: #c00000;
     stroke-width: 2;
     stroke-linecap: round;
