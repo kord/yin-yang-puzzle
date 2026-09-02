@@ -1,5 +1,5 @@
 import Logic from "logic-solver";
-import type { Location, YinYangPuzzlePartialDefinition, YinYangPuzzleSolution } from "./types";
+import type { Extension, Location, YinYangPuzzlePartialDefinition, YinYangPuzzleSolution } from "./types";
 
 const USE_ONLY_BASIC_RULES = true;
 
@@ -72,13 +72,8 @@ class YYSolver {
         }
     }
 
-    public solve(): YinYangPuzzleSolution | null {
-        const solution = this.solver.solve();
-        if (!solution) {
-            return null;
-        }
-
-        const isWhite: boolean[][] = Array.from({ length: this.puzzle.size.height }, () => Array(this.puzzle.size.width).fill(false));
+    public logicSolutionToYinYangSolution(solution: Logic.Solution): YinYangPuzzleSolution {
+        let isWhite: boolean[][] = Array.from({ length: this.puzzle.size.height }, () => Array(this.puzzle.size.width).fill(false));
         solution.getTrueVars().forEach((varName) => {
             const loc = this.getVarLoc(varName);
             if (loc) {
@@ -88,6 +83,79 @@ class YYSolver {
         return { size: this.puzzle.size, isWhite };
     }
 
+    public anySolution(): YinYangPuzzleSolution | null {
+        const solution = this.solver.solve();
+        if (!solution) {
+            return null;
+        }
+        return this.logicSolutionToYinYangSolution(solution);
+    }
+
+    public uniqueSolution(): YinYangPuzzleSolution | null {
+        const solution = this.solver.solve();
+        if (!solution) {
+            return null;
+        }
+        const secondSolution = this.solver.solveAssuming(Logic.not(solution.getTrueVars()));
+        if (secondSolution) {
+            return null; // Multiple solutions exist
+        }
+        return this.logicSolutionToYinYangSolution(solution);
+    }
+
+    public extensions(): Extension {
+        let extensions: Extension = {
+            size: this.puzzle.size,
+            possibilities: Array.from({ length: this.puzzle.size.height }, () => Array(this.puzzle.size.width).fill({ fixed: false, blackPossible: false, whitePossible: false }))
+        };
+        const possibilities = extensions.possibilities;
+
+        // Set the fixed components in the possibilities grid based on the puzzle's fixed whites and blacks
+        this.puzzle.fixedWhites.forEach((row, r) => {
+            row.forEach((isWhite, c) => {
+                if (isWhite) {
+                    possibilities[r][c] = { fixed: true, blackPossible: false, whitePossible: true };
+                }
+            });
+        });
+        this.puzzle.fixedBlacks.forEach((row, r) => {
+            row.forEach((isBlack, c) => {
+                if (isBlack) {
+                    possibilities[r][c] = { fixed: true, blackPossible: true, whitePossible: false };
+                }
+            });
+        });
+
+        // Test each non-fixed square for whether it may potentially be white or black
+        for (let row = 0; row < this.puzzle.size.height; row++) {
+            for (let col = 0; col < this.puzzle.size.width; col++) {
+                // Solver currently only has the requirements put up in the puzzle definition given to us, so 
+                // we add more constraints and see if they work.
+                const currentPoss = possibilities[row][col];
+                if (currentPoss.fixed || (currentPoss.whitePossible && currentPoss.blackPossible)) continue;
+
+                const whiteSolution = this.solver.solveAssuming(this.getCellVar(row, col));
+                const blackSolution = this.solver.solveAssuming(Logic.not(this.getCellVar(row, col)));
+                const canBeWhite = whiteSolution !== null;
+                const canBeBlack = blackSolution !== null;
+                currentPoss.whitePossible = canBeWhite;
+                currentPoss.blackPossible = canBeBlack;
+                whiteSolution?.getTrueVars().forEach((varName) => {
+                    const loc = this.getVarLoc(varName);
+                    if (loc) {
+                        possibilities[loc.row][loc.col].whitePossible = true;
+                    }
+                });
+                blackSolution?.getTrueVars().forEach((varName) => {
+                    const loc = this.getVarLoc(varName);
+                    if (loc) {
+                        possibilities[loc.row][loc.col].blackPossible = true;
+                    }
+                });
+            }
+        }
+        return extensions;
+    }
 }
 
 export default YYSolver;

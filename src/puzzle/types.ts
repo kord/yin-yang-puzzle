@@ -4,6 +4,11 @@ type GridPossibility = {
     whitePossible: boolean;
 };
 
+type Extension = {
+    size: Size;
+    possibilities: GridPossibility[][];
+};
+
 type Size = {
     width: number;
     height: number;
@@ -27,8 +32,8 @@ interface YinYangPuzzlePartialDefinition {
 
 type YinYangPuzzleDefinition = {
     size: Size;
-    fixedWhites: boolean[][];
-    fixedBlacks: boolean[][];
+    fixedWhites: readonly boolean[][];
+    fixedBlacks: readonly boolean[][];
     solution: YinYangPuzzleSolution;
 };
 
@@ -38,5 +43,6 @@ export type {
     Location,
     YinYangPuzzlePartialDefinition,
     YinYangPuzzleSolution,
-    YinYangPuzzleDefinition
+    YinYangPuzzleDefinition,
+    Extension,
 };
