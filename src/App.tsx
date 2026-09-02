@@ -134,6 +134,7 @@ function App() {
       updatingRef.current = true
       grid.applyHints([])
       updatingRef.current = false
+      if (statusRef.current) statusRef.current.textContent = '—'
       return
     }
 
@@ -152,11 +153,18 @@ function App() {
     const grid = gridRef.current
     if (!grid) return
     const n = sizeRef.current
+    const marks = marksRef.current
+    const hasMark =
+      marks.whites.some((row) => row.some(Boolean)) ||
+      marks.blacks.some((row) => row.some(Boolean))
+
     const hints: { ref: ElementRef; state: ElementState }[] = []
+    let anyPossible = false
     for (let r = 0; r < n; r++) {
       for (let c = 0; c < n; c++) {
         const p = extensions.possibilities[r][c]
         if (p.fixed) continue
+        if (p.whitePossible || p.blackPossible) anyPossible = true
         if (p.whitePossible && !p.blackPossible) {
           hints.push({ ref: { kind: 'square', row: r, col: c }, state: 'inactivated' })
         } else if (p.blackPossible && !p.whitePossible) {
@@ -164,10 +172,14 @@ function App() {
         }
       }
     }
+
     updatingRef.current = true
     grid.applyHints(hints)
     updatingRef.current = false
-    if (statusRef.current) statusRef.current.textContent = 'Done'
+
+    if (statusRef.current) {
+      statusRef.current.textContent = hasMark && !anyPossible ? 'No solution' : 'Done'
+    }
   }
 
   function scheduleRecompute() {

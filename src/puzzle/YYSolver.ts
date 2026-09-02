@@ -164,7 +164,7 @@ class YYSolver {
     }
 
     public anySolution(): YinYangPuzzleSolution | null {
-        const solution = this.solver.solve();
+        const solution = this.solveConnected();
         if (!solution) {
             return null;
         }
@@ -172,11 +172,11 @@ class YYSolver {
     }
 
     public uniqueSolution(): YinYangPuzzleSolution | null {
-        const solution = this.solver.solve();
+        const solution = this.solveConnected();
         if (!solution) {
             return null;
         }
-        const secondSolution = this.solver.solveAssuming(this.differentAssignment(solution));
+        const secondSolution = this.solveConnected(this.differentAssignment(solution));
         if (secondSolution) {
             return null; // Multiple solutions exist
         }
@@ -200,6 +200,78 @@ class YYSolver {
             }
         }
         return Logic.not(Logic.and(...literals));
+    }
+
+    /**
+     * True if every white cell and every black cell forms a single 4-connected group.
+     */
+    private isConnectedSolution(solution: Logic.Solution): boolean {
+        const { height, width } = this.puzzle.size;
+        const cellWhites = new Set(solution.getTrueVars());
+        const visited = new Set<string>();
+        const flood = (white: boolean, sr: number, sc: number) => {
+            const stack = [[sr, sc]];
+            while (stack.length) {
+                const [r, c] = stack.pop()!;
+                const key = `${r},${c}`;
+                if (visited.has(key)) continue;
+                visited.add(key);
+                for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                    const nr = r + dr, nc = c + dc;
+                    if (nr < 0 || nc < 0 || nr >= height || nc >= width) continue;
+                    if (cellWhites.has(this.getCellVar(nr, nc)) === white) stack.push([nr, nc]);
+                }
+            }
+        };
+
+        const whites: [number, number][] = [];
+        const blacks: [number, number][] = [];
+        for (let r = 0; r < height; r++) {
+            for (let c = 0; c < width; c++) {
+                if (cellWhites.has(this.getCellVar(r, c))) whites.push([r, c]);
+                else blacks.push([r, c]);
+            }
+        }
+
+        if (whites.length) {
+            flood(true, whites[0][0], whites[0][1]);
+            if (!whites.every(([r, c]) => visited.has(`${r},${c}`))) return false;
+            visited.clear();
+        }
+        if (blacks.length) {
+            flood(false, blacks[0][0], blacks[0][1]);
+            if (!blacks.every(([r, c]) => visited.has(`${r},${c}`))) return false;
+        }
+        return true;
+    }
+
+    /** The exact assignment as a conjunction of cell literals. */
+    private assignmentTerm(solution: Logic.Solution): Logic.Term {
+        const whites = new Set(solution.getTrueVars());
+        const literals: Logic.Term[] = [];
+        for (let row = 0; row < this.puzzle.size.height; row++) {
+            for (let col = 0; col < this.puzzle.size.width; col++) {
+                const name = this.getCellVar(row, col);
+                literals.push(whites.has(name) ? name : Logic.not(name));
+            }
+        }
+        return Logic.and(...literals);
+    }
+
+    /**
+     * Solve (optionally under an assumption), rejecting any solution whose colours
+     * are not each a single connected group by forbidding that model and re-solving.
+     * This makes connectivity exact (the edge-count "tree" constraint alone is not
+     * sufficient — it can be satisfied by a cyclic component + a detached cell).
+     */
+    private solveConnected(assumption?: Logic.Term): Logic.Solution | null {
+        for (let i = 0; i < 500; i++) {
+            const solution = assumption ? this.solver.solveAssuming(assumption) : this.solver.solve();
+            if (!solution) return null;
+            if (this.isConnectedSolution(solution)) return solution;
+            this.solver.forbid(this.assignmentTerm(solution));
+        }
+        return null;
     }
 
     public extensions(): Extension {
@@ -233,9 +305,9 @@ class YYSolver {
             }
         };
 
-        // Seed from any one solution: every cell then already knows one colour
-        // it can take, so we only ever need to test the *other* colour.
-        const seed = this.solver.solve();
+        // Seed from any one connected solution: every cell then already knows one
+        // colour it can take, so we only ever need to test the *other* colour.
+        const seed = this.solveConnected();
         if (seed) apply(seed);
 
         // For each cell, resolve only the possibility we haven't established yet.
@@ -246,11 +318,11 @@ class YYSolver {
 
                 if (poss.whitePossible) {
                     // Only white known; test whether black is possible.
-                    const solution = this.solver.solveAssuming(Logic.not(this.getCellVar(r, c)));
+                    const solution = this.solveConnected(Logic.not(this.getCellVar(r, c)));
                     if (solution) apply(solution);
                 } else if (poss.blackPossible) {
                     // Only black known; test whether white is possible.
-                    const solution = this.solver.solveAssuming(this.getCellVar(r, c));
+                    const solution = this.solveConnected(this.getCellVar(r, c));
                     if (solution) apply(solution);
                 }
             }

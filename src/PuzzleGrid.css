@@ -13,9 +13,22 @@
     /* allow drag-painting on touch screens */
     user-select: none;
     -webkit-user-select: none;
-    background: var(--pg-bg, #ffffff);
-    border: 1px solid var(--pg-border, #d0d0d0);
+    /* warm goban wood */
+    background:
+        radial-gradient(130% 110% at 30% 20%, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0) 55%),
+        repeating-linear-gradient(0deg,
+            rgba(74, 45, 18, 0.05) 0 1px,
+            rgba(74, 45, 18, 0) 1px 6px,
+            rgba(74, 45, 18, 0.03) 6px 7px,
+            rgba(74, 45, 18, 0) 7px 19px),
+        radial-gradient(120% 120% at 50% 50%, rgba(0, 0, 0, 0) 55%, rgba(74, 45, 18, 0.22) 100%),
+        linear-gradient(180deg, #ddb27c, #cf9a58);
+    border: 1px solid #8a5a2e;
     border-radius: 8px;
+    box-shadow:
+        inset 0 1px 2px rgba(255, 255, 255, 0.28),
+        inset 0 -2px 4px rgba(74, 45, 18, 0.15),
+        0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .puzzle-grid__shape {
@@ -80,7 +93,7 @@
 
 /* Solver-inferred (forced) cells: shown as a translucent hint. */
 .puzzle-grid__square--inferred .puzzle-grid__shape {
-    opacity: 0.6;
+    opacity: 0.4;
 }
 
 /* Edges */
