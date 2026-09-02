@@ -167,8 +167,43 @@ export class PuzzleGrid {
         return this.readonlyCells.has(this.elementId(ref))
     }
 
+    /** Whether this element is currently shown as a solver-inferred hint. */
+    getInferred(ref: ElementRef): boolean {
+        return this.inferredCells.has(this.elementId(ref))
+    }
+
+    /**
+     * Display solver-deduced cells as semi-transparent, read-only hints.
+     * Pass the full set of currently-forced cells; cells not in `hints` that were
+     * previously inferred are reset back to their default (untouched) state.
+     */
+    applyHints(hints: { ref: ElementRef; state: ElementState }[]): void {
+        const newIds = new Set(hints.map((h) => this.elementId(h.ref)))
+
+        // Clear stale hints (no longer forced).
+        for (const id of [...this.inferredCells]) {
+            if (!newIds.has(id)) {
+                this.inferredCells.delete(id)
+                this.readonlyCells.delete(id)
+                this.states.delete(id)
+                this.updateElement(id, this.defaultStateForId(id))
+            }
+        }
+
+        // Apply the current hints.
+        for (const { ref, state } of hints) {
+            const id = this.elementId(ref)
+            this.inferredCells.add(id)
+            this.readonlyCells.add(id)
+            this.states.set(id, state)
+            this.updateElement(id, state)
+        }
+    }
+
     /** Reset every element back to its kind's default state. */
     reset(): void {
+        this.inferredCells.clear()
+        this.readonlyCells.clear()
         const ids = [...this.states.keys()]
         for (const id of ids) {
             this.states.delete(id)
@@ -471,8 +506,10 @@ export class PuzzleGrid {
         const orientationClass =
             kind === 'edge' ? ` ${kindClass}--${orientation}` : ''
         const stateClass = state === 'untouched' ? '' : ` ${kindClass}--${state}`
-        const givenClass = this.readonlyCells.has(id) ? ` ${kindClass}--given` : ''
-        return `${kindClass}${orientationClass}${stateClass}${givenClass}`
+        const isInferred = this.inferredCells.has(id)
+        const givenClass = !isInferred && this.readonlyCells.has(id) ? ` ${kindClass}--given` : ''
+        const inferredClass = isInferred ? ` ${kindClass}--inferred` : ''
+        return `${kindClass}${orientationClass}${stateClass}${givenClass}${inferredClass}`
     }
 
     // -------------------------------------------------------------------------

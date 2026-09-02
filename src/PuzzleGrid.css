@@ -78,6 +78,11 @@
     stroke-width: 2.5;
 }
 
+/* Solver-inferred (forced) cells: shown as a translucent hint. */
+.puzzle-grid__square--inferred .puzzle-grid__shape {
+    opacity: 0.6;
+}
+
 /* Edges */
 .puzzle-grid__edge .puzzle-grid__shape {
     stroke: transparent;

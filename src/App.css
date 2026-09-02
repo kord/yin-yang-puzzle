@@ -37,6 +37,48 @@
   margin: 6px 0;
 }
 
+.app__controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.app__undo {
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #bbb;
+  background: #3b3131;
+  cursor: pointer;
+}
+
+.app__undo:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.app__undo:not(:disabled):hover {
+  background: #f0f0f0;
+}
+
+.app__sizelabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.app__size {
+  font: inherit;
+  font-size: 14px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid #bbb;
+  background: #6b6868;
+}
+
 .app__code {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
@@ -87,6 +129,11 @@
 
 .app__swatch--inactivated {
   background: #eaeaea;
+}
+
+.app__swatch--inferred {
+  background: rgba(26, 26, 26, 0.4);
+  border-color: #9a9a9a;
 }
 
 .app__swatch--x {
