@@ -9,6 +9,9 @@ import './App.css'
 
 const SIZES = Array.from({ length: 9 }, (_, i) => i + 4) // 4x4 .. 12x12
 
+// Only show the debug Status panel during development; hide it in production.
+const SHOW_STATUS_BAR = import.meta.env.DEV
+
 type GenResponse = { id: number; puzzle: YinYangPuzzleDefinition; date?: string; prefetch?: boolean }
 
 const DEFAULT_SIZE = 6
@@ -502,11 +505,18 @@ function PlayMode() {
                     Fill every cell <strong>black</strong> or <strong>white</strong> so each
                     color forms one connected group and no 2×2 block  is all one color.
                 </p>
-
-                <h2 className="app__heading">Status</h2>
-                <p className="app__status">
-                    {generating ? status || 'Generating…' : status || (puzzle ? '—' : '')}
+                <p className="app__text">
+                    Idea from <a href="https://www.puzzle-yin-yang.com/">Here</a>
                 </p>
+
+                {SHOW_STATUS_BAR && (
+                    <>
+                        <h2 className="app__heading">Status</h2>
+                        <p className="app__status">
+                            {generating ? status || 'Generating…' : status || (puzzle ? '—' : '')}
+                        </p>
+                    </>
+                )}
             </aside>
 
             <Confetti active={celebrate} />
