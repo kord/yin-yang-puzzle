@@ -37,6 +37,8 @@ type YinYangPuzzleDefinition = {
     solution: YinYangPuzzleSolution;
 };
 
+type UserCell = '.' | 'b' | 'w'
+
 export type {
     GridPossibility,
     Size,
@@ -45,4 +47,5 @@ export type {
     YinYangPuzzleSolution,
     YinYangPuzzleDefinition,
     Extension,
+    UserCell,
 };

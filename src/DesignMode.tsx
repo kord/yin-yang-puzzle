@@ -65,10 +65,10 @@ function DesignMode() {
             cols: size,
             kinds: { square: true, edge: false, vertex: false },
             paintButtons: {
-              square: {
-                0: ['untouched', 'activated', 'inactivated'],
-                2: ['untouched', 'inactivated', 'activated'],
-              },
+                square: {
+                    0: ['untouched', 'activated', 'inactivated'],
+                    2: ['untouched', 'inactivated', 'activated'],
+                },
             },
             onStateChange: (ref, state) => {
                 if (updatingRef.current) return

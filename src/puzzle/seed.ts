@@ -14,12 +14,22 @@ export function mulberry32(seed: number): () => number {
  * A stable seed derived from a date, so every day yields the same puzzle.
  * Uses local date components (YYYY-M-D) fed through FNV-1a.
  */
-export function dailySeed(date: Date = new Date()): number {
-    const str = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+export function dailyDate(date: Date = new Date()): string {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+}
+
+export function seedFromDateString(dateStr: string): number {
     let h = 0x811c9dc5
-    for (let i = 0; i < str.length; i++) {
-        h ^= str.charCodeAt(i)
+    for (let i = 0; i < dateStr.length; i++) {
+        h ^= dateStr.charCodeAt(i)
         h = Math.imul(h, 0x01000193)
     }
     return h >>> 0
+}
+
+export function dailySeed(date: Date = new Date()): number {
+    return seedFromDateString(dailyDate(date))
 }
