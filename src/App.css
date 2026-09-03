@@ -237,6 +237,10 @@
   cursor: pointer;
 }
 
+.app__sizebtn:hover {
+  background: #584949;
+}
+
 .app__sizebtn:disabled {
   opacity: 0.5;
   cursor: default;
@@ -259,7 +263,7 @@
 }
 
 .app__sizebtn--completed:hover {
-  background: #5ea85e;
+  background: #7cd17c;
 }
 
 body.cursor-busy,

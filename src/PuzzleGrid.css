@@ -46,7 +46,7 @@
 
 /* Given (fixed/clue) cells show a gray backdrop to distinguish them. */
 .puzzle-grid__square--given .puzzle-grid__cell-bg {
-    fill: #dca74ca4;
+    fill: #a98341a4;
 }
 
 .puzzle-grid__edge .puzzle-grid__shape {
