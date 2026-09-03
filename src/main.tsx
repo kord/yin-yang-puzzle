@@ -13,6 +13,6 @@ createRoot(document.getElementById('root')!).render(
 // (production only, to avoid caching dev/HMR assets).
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {})
+    navigator.serviceWorker.register('/sw.js').catch(() => { })
   })
 }
