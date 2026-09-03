@@ -1,8 +1,8 @@
 import { generateRandomPuzzle } from './generator'
 import type { Size, YinYangPuzzleDefinition } from './types'
 
-type GenRequest = { id: number; size: Size; seed: number }
-type GenResponse = { id: number; puzzle: YinYangPuzzleDefinition }
+type GenRequest = { id: number; size: Size; seed: number; date?: string; prefetch?: boolean }
+type GenResponse = { id: number; puzzle: YinYangPuzzleDefinition; date?: string; prefetch?: boolean }
 
 const ctx = self as unknown as {
     onmessage: ((e: MessageEvent) => void) | null
@@ -10,7 +10,7 @@ const ctx = self as unknown as {
 }
 
 ctx.onmessage = (e: MessageEvent<GenRequest>) => {
-    const { id, size, seed } = e.data
+    const { id, size, seed, date, prefetch } = e.data
     const puzzle = generateRandomPuzzle(size, seed)
-    ctx.postMessage({ id, puzzle })
+    ctx.postMessage({ id, puzzle, date, prefetch })
 }

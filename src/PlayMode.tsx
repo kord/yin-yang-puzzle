@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { PuzzleGrid, type ElementRef } from './PuzzleGrid'
 import type { UserCell, YinYangPuzzleDefinition } from './puzzle/types'
 import { dailyDate, seedFromDateString } from './puzzle/seed'
-import { loadDay, saveDay, emptyUserCells } from './storage'
+import { loadDay, saveDay, getSolvedDates, emptyUserCells } from './storage'
 import Confetti from './Confetti'
+import MonthPicker from './MonthPicker'
 import './App.css'
 
 const SIZES = Array.from({ length: 9 }, (_, i) => i + 4) // 4x4 .. 12x12
 
-type GenResponse = { id: number; puzzle: YinYangPuzzleDefinition }
+type GenResponse = { id: number; puzzle: YinYangPuzzleDefinition; date?: string; prefetch?: boolean }
 type Mode = 'daily' | 'random'
 
 function PlayMode() {
@@ -19,6 +20,7 @@ function PlayMode() {
     const [date, setDate] = useState(dailyDate())
     const [celebrate, setCelebrate] = useState(false)
     const [canUndo, setCanUndo] = useState(false)
+    const [completedSizes, setCompletedSizes] = useState<number[]>([])
 
     const containerRef = useRef<HTMLDivElement | null>(null)
     const gridRef = useRef<PuzzleGrid | null>(null)
@@ -33,6 +35,7 @@ function PlayMode() {
     const solvedRef = useRef(false)
     const saveTimerRef = useRef<number | null>(null)
     const historyRef = useRef<UserCell[][]>([])
+    const prefetchIdRef = useRef(0)
 
     useEffect(() => {
         sizeRef.current = size
@@ -49,6 +52,17 @@ function PlayMode() {
         })
         workerRef.current = worker
         worker.onmessage = (e: MessageEvent<GenResponse>) => {
+            // A background pre-generation for the next size: cache it silently.
+            if (e.data.prefetch) {
+                const n = e.data.puzzle.size.width
+                const d = e.data.date ?? dateRef.current
+                saveDay(localStorage, n, d, {
+                    puzzle: e.data.puzzle,
+                    userCells: emptyUserCells(n * n),
+                    solved: false,
+                })
+                return
+            }
             if (e.data.id !== requestIdRef.current) return // ignore stale results
             setGenerating(false)
             setPuzzle(e.data.puzzle)
@@ -158,6 +172,18 @@ function PlayMode() {
         return () => document.body.classList.remove('cursor-busy')
     }, [generating])
 
+    // Silently pre-generate the next-size daily puzzle in the background.
+    useEffect(() => {
+        if (puzzle && modeRef.current === 'daily') prefetchNext()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [puzzle, size])
+
+    // Mark sizes that have been completed at least once.
+    useEffect(() => {
+        refreshCompletedSizes()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     // Flush any pending daily progress when leaving Play mode.
     useEffect(() => {
         return () => {
@@ -219,6 +245,29 @@ function PlayMode() {
         setStatus('Generating…')
         const seedValue = Math.floor(Math.random() * 0xffffffff)
         workerRef.current?.postMessage({ id, size: { width: n, height: n }, seed: seedValue })
+    }
+
+    /**
+     * Pre-generate the puzzle one size larger than the one being played so it is
+     * ready when the user scales up. Only caches daily puzzles (deterministic per
+     * date) and never sets `generating`, so the busy cursor is not shown.
+     */
+    function prefetchNext() {
+        if (modeRef.current !== 'daily') return
+        const n = sizeRef.current
+        const next = n + 1
+        const max = SIZES[SIZES.length - 1]
+        if (next > max) return
+        const d = dateRef.current
+        if (loadDay(localStorage, next, d)) return // already cached
+        const id = ++prefetchIdRef.current
+        workerRef.current?.postMessage({
+            id,
+            size: { width: next, height: next },
+            seed: seedFromDateString(d),
+            date: d,
+            prefetch: true,
+        })
     }
 
     function readUserCells(): UserCell[] {
@@ -336,6 +385,12 @@ function PlayMode() {
             }
         }
         updatingRef.current = false
+        refreshCompletedSizes()
+    }
+
+    function refreshCompletedSizes() {
+        const completed = SIZES.filter((s) => getSolvedDates(localStorage, s).length > 0)
+        setCompletedSizes(completed)
     }
 
     return (
@@ -360,36 +415,31 @@ function PlayMode() {
                     <button type="button" className="app__undo" onClick={reset} disabled={generating}>
                         Reset
                     </button>
-                    <label className="app__sizelabel">
-                        Size
-                        <select
-                            className="app__size"
-                            value={size}
-                            onChange={(e) => setSize(Number(e.target.value))}
-                        >
-                            {SIZES.map((s) => (
-                                <option key={s} value={s}>
-                                    {s}×{s}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
                 </div>
 
-                <label className="app__sizelabel app__datecontrol">
-                    Daily
-                    <input
-                        type="date"
-                        className="app__date"
+                <div className="app__datecontrol">
+                    <span className="app__datelabel">Daily</span>
+                    <MonthPicker
                         value={date}
                         max={dailyDate()}
                         disabled={generating}
-                        onChange={(e) => {
-                            const d = e.target.value
-                            if (d) generateDaily(d)
-                        }}
+                        onSelect={(d) => generateDaily(d)}
                     />
-                </label>
+                </div>
+
+                <div className="app__sizes">
+                    {SIZES.map((s) => (
+                        <button
+                            key={s}
+                            type="button"
+                            className={`app__sizebtn${s === size ? ' app__sizebtn--active' : ''}${completedSizes.includes(s) ? ' app__sizebtn--completed' : ''}`}
+                            disabled={generating}
+                            onClick={() => setSize(s)}
+                        >
+                            {s}×{s}
+                        </button>
+                    ))}
+                </div>
 
                 <p className="app__text">
                     <strong>Left-click</strong> cycles
