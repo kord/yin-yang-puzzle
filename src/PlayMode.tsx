@@ -11,6 +11,7 @@ const SIZES = Array.from({ length: 9 }, (_, i) => i + 4) // 4x4 .. 12x12
 
 type GenResponse = { id: number; puzzle: YinYangPuzzleDefinition; date?: string; prefetch?: boolean }
 
+const DEFAULT_SIZE = 6
 function PlayMode() {
     const [size, setSize] = useState(6)
     const [generating, setGenerating] = useState(false)
@@ -230,6 +231,19 @@ function PlayMode() {
         workerRef.current?.postMessage({ id, size: { width: n, height: n }, seed: seedFromDateString(d) })
     }
 
+    /** Changing dates always starts at the smallest (4×4) puzzle. */
+    function selectDate(d: string) {
+        if (sizeRef.current === DEFAULT_SIZE) {
+            generateDaily(d)
+        } else {
+            // Reset to 4×4; the [size] effect reloads for the new date.
+            sizeRef.current = DEFAULT_SIZE
+            setSize(DEFAULT_SIZE)
+            dateRef.current = d
+            setDate(d)
+        }
+    }
+
     /**
      * Pre-generate the puzzle one size larger than the one being played so it is
      * ready when the user scales up. Only caches daily puzzles (deterministic per
@@ -414,7 +428,7 @@ function PlayMode() {
                         value={date}
                         max={dailyDate()}
                         disabled={generating}
-                        onSelect={(d) => generateDaily(d)}
+                        onSelect={selectDate}
                         isCompleted={(d) => SIZES.every((s) => getSolvedDates(localStorage, s).includes(d))}
                     />
                 </div>
