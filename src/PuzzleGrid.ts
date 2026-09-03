@@ -39,8 +39,6 @@ export interface PuzzleGridOptions {
     cols: number
     /** Size of a cell in SVG user units. Default 64. */
     cellSize?: number
-    /** Gap around each square tile. Default 0 (squares are flush with grid lines). */
-    innerGap?: number
     /** Per-kind default state when no state has been assigned. Default `untouched`. */
     defaultState?: Partial<Record<ElementKind, ElementState>>
     /** Per-kind order in which painting cycles through states. */
@@ -72,7 +70,6 @@ export class PuzzleGrid {
     private readonly rows: number
     private readonly cols: number
     private readonly cellSize: number
-    private readonly innerGap: number
     private readonly defaultState: Record<ElementKind, ElementState>
     private readonly paintCycle: Record<ElementKind, ElementState[]>
     private readonly paintButtons: Record<ElementKind, Partial<Record<number, ElementState | ElementState[]>>>
@@ -97,7 +94,6 @@ export class PuzzleGrid {
         this.rows = options.rows
         this.cols = options.cols
         this.cellSize = options.cellSize ?? 64
-        this.innerGap = options.innerGap ?? 0
         this.defaultState = {
             square: options.defaultState?.square ?? DEFAULT_STATE,
             edge: options.defaultState?.edge ?? DEFAULT_STATE,
@@ -135,11 +131,11 @@ export class PuzzleGrid {
     }
 
     private get width(): number {
-        return this.pad * 2 + this.cellSize * this.cols
+        return this.pad * 2 + this.cellSize * Math.max(0, this.cols - 1)
     }
 
     private get height(): number {
-        return this.pad * 2 + this.cellSize * this.rows
+        return this.pad * 2 + this.cellSize * Math.max(0, this.rows - 1)
     }
 
     private get vertexRadius(): number {
@@ -264,6 +260,7 @@ export class PuzzleGrid {
 
         if (this.visibleKinds.square) {
             this.appendStoneDefs(svg)
+            this.buildLines(svg)
             const squares = this.createLayer('puzzle-grid__squares')
             this.buildSquares(squares)
             svg.appendChild(squares)
@@ -361,39 +358,70 @@ export class PuzzleGrid {
         return g
     }
 
+    private buildLines(svg: SVGSVGElement): void {
+        const layer = this.createLayer('puzzle-grid__lines')
+        const s = this.cellSize
+        const x0 = this.pad
+        const y0 = this.pad
+        const x1 = this.pad + (this.cols - 1) * s
+        const y1 = this.pad + (this.rows - 1) * s
+        for (let r = 0; r < this.rows; r++) {
+            const y = this.pad + r * s
+            layer.appendChild(
+                this.createSvgEl('line', { class: 'puzzle-grid__line', x1: String(x0), y1: String(y), x2: String(x1), y2: String(y) }),
+            )
+        }
+        for (let c = 0; c < this.cols; c++) {
+            const x = this.pad + c * s
+            layer.appendChild(
+                this.createSvgEl('line', { class: 'puzzle-grid__line', x1: String(x), y1: String(y0), x2: String(x), y2: String(y1) }),
+            )
+        }
+        svg.appendChild(layer)
+    }
+
     private buildSquares(layer: SVGGElement): void {
         const s = this.cellSize
-        const gap = this.innerGap
+        const radius = s * 0.4
         for (let r = 0; r < this.rows; r++) {
             for (let c = 0; c < this.cols; c++) {
                 const ref: ElementRef = { kind: 'square', row: r, col: c }
-                const x = this.pad + c * s + gap / 2
-                const y = this.pad + r * s + gap / 2
-                const w = s - gap
-                const h = s - gap
+                const cx = this.pad + c * s
+                const cy = this.pad + r * s
 
                 const g = this.createGroup(ref)
 
-                // Cell background (board). Given cells get a gray backdrop via CSS.
-                g.appendChild(this.createSvgEl('rect', {
-                    class: 'puzzle-grid__cell-bg',
-                    x: String(x),
-                    y: String(y),
-                    width: String(w),
-                    height: String(h),
-                }))
+                // A generous invisible hit area around the intersection.
+                g.appendChild(
+                    this.createSvgEl('circle', {
+                        class: 'puzzle-grid__hit-area',
+                        cx: String(cx),
+                        cy: String(cy),
+                        r: String(s * 0.45),
+                        fill: 'transparent',
+                    }),
+                )
 
-                // The stone, rendered as a glossy circle.
-                const cx = x + w / 2
-                const cy = y + h / 2
-                const radius = Math.min(w, h) / 2 * 0.78
-                g.appendChild(this.createSvgEl('circle', {
-                    class: 'puzzle-grid__shape',
-                    cx: String(cx),
-                    cy: String(cy),
-                    r: String(radius),
-                }))
-                g.appendChild(this.buildXOverlay(cx, cy, radius * 0.7))
+                // Given (clue) halo, shaded via CSS when the cell is given.
+                g.appendChild(
+                    this.createSvgEl('circle', {
+                        class: 'puzzle-grid__given-halo',
+                        cx: String(cx),
+                        cy: String(cy),
+                        r: String(radius * 1.2),
+                    }),
+                )
+
+                // The stone sits on the intersection.
+                g.appendChild(
+                    this.createSvgEl('circle', {
+                        class: 'puzzle-grid__shape',
+                        cx: String(cx),
+                        cy: String(cy),
+                        r: String(radius),
+                    }),
+                )
+                g.appendChild(this.buildXOverlay(cx, cy, radius * 0.6))
                 layer.appendChild(g)
                 this.register(ref, g)
             }

@@ -36,17 +36,21 @@
     transition: fill 0.1s ease, stroke 0.1s ease;
 }
 
-/* Cell background (the "board" behind a square). */
-.puzzle-grid__cell-bg {
-    pointer-events: all;
-    fill: transparent;
-    stroke: #000000;
+/* Goban lattice lines drawn under the stones. */
+.puzzle-grid__line {
+    stroke: #3a2410;
     stroke-width: 1.5;
 }
 
-/* Given (fixed/clue) cells show a gray backdrop to distinguish them. */
-.puzzle-grid__square--given .puzzle-grid__cell-bg {
-    fill: #a98341a4;
+/* Given (fixed/clue) stones show a translucent halo to distinguish them. */
+.puzzle-grid__given-halo {
+    fill: transparent;
+    stroke: none;
+    pointer-events: none;
+}
+
+.puzzle-grid__square--given .puzzle-grid__given-halo {
+    fill: #906f37a4;
 }
 
 .puzzle-grid__edge .puzzle-grid__shape {
@@ -62,10 +66,16 @@
     pointer-events: none;
 }
 
-/* Squares */
+/* Squares (stones sit on the goban intersections) */
 .puzzle-grid__square .puzzle-grid__shape {
     fill: transparent;
     stroke: none;
+}
+
+.puzzle-grid__square .puzzle-grid__hit-area {
+    fill: transparent;
+    stroke: none;
+    pointer-events: all;
 }
 
 .puzzle-grid__square--activated .puzzle-grid__shape {
