@@ -32,7 +32,7 @@ function PlayMode() {
     const userCellsRef = useRef<UserCell[]>([])
     const solvedRef = useRef(false)
     const saveTimerRef = useRef<number | null>(null)
-    const historyRef = useRef<UserCell[][]>([])
+    const historyRef = useRef<{ cells: UserCell[]; solved: boolean }[]>([])
     const prefetchIdRef = useRef(0)
 
     useEffect(() => {
@@ -152,10 +152,12 @@ function PlayMode() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [size])
 
-    // Undo the previous paint with the Z key.
+    // Undo with Z and reset with R.
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key.toLowerCase() === 'z' && !e.shiftKey && !e.ctrlKey && !e.metaKey) undo()
+            const k = e.key.toLowerCase()
+            if (k === 'z' && !e.shiftKey && !e.ctrlKey && !e.metaKey) undo()
+            else if (k === 'r' && !e.shiftKey && !e.ctrlKey && !e.metaKey) reset()
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
@@ -288,12 +290,12 @@ function PlayMode() {
     }
 
     function commitHistory() {
-        historyRef.current.push(userCellsRef.current.slice())
+        historyRef.current.push({ cells: userCellsRef.current.slice(), solved: solvedRef.current })
         if (historyRef.current.length > 200) historyRef.current.shift()
         setCanUndo(true)
     }
 
-    function restoreOpenCells(cells: UserCell[]) {
+    function restoreOpenCells(cells: UserCell[], solved = false) {
         const grid = gridRef.current
         const pz = puzzleRef.current
         if (!grid || !pz) return
@@ -316,9 +318,16 @@ function PlayMode() {
         }
         updatingRef.current = false
         userCellsRef.current = cells.slice()
-        solvedRef.current = false
-        setStatus('')
+        solvedRef.current = solved
+        setStatus(solved ? 'Solved!' : '')
         setCelebrate(false)
+        if (solved) {
+            for (let r = 0; r < n; r++) {
+                for (let c = 0; c < n; c++) {
+                    grid.setReadonly({ kind: 'square', row: r, col: c }, true)
+                }
+            }
+        }
         saveProgress()
     }
 
@@ -326,13 +335,14 @@ function PlayMode() {
         const hist = historyRef.current
         if (!hist.length) return
         const prev = hist.pop()!
-        restoreOpenCells(prev)
+        restoreOpenCells(prev.cells, prev.solved)
         setCanUndo(hist.length > 0)
     }
 
     function reset() {
-        historyRef.current = []
-        setCanUndo(false)
+        const cells = userCellsRef.current
+        if (!cells.some((c) => c !== '.')) return // nothing to reset
+        commitHistory() // make the reset undoable
         const n = sizeRef.current
         restoreOpenCells(emptyUserCells(n * n))
     }
@@ -391,10 +401,10 @@ function PlayMode() {
                         onClick={undo}
                         disabled={generating || !canUndo}
                     >
-                        Undo
+                        Undo (Z)
                     </button>
                     <button type="button" className="app__undo" onClick={reset} disabled={generating}>
-                        Reset
+                        Reset (R)
                     </button>
                 </div>
 
@@ -431,6 +441,9 @@ function PlayMode() {
                     <strong>Right-click</strong> cycles
                     <br />
                     <code className="app__code">empty → white → black</code>.
+                </p>
+                <p className="app__text">
+                    <strong>Z</strong> undoes · <strong>R</strong> resets.
                 </p>
                 <p className="app__text">
                     Fill every cell so the stones form a valid

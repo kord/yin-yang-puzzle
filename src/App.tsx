@@ -10,7 +10,17 @@ function App() {
 
   return (
     <div className="app">
-      <h1>Yin Yang Puzzle</h1>
+      <h1 className="app__title">
+        <span className="app__title-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="30" height="30">
+            <circle cx="24" cy="24" r="22" fill="#f0ede4" />
+            <path d="M24 2 a22 22 0 0 0 0 44 a11 11 0 0 1 0 -22 a11 11 0 0 0 0 -22 z" fill="#1a1a1a" />
+            <circle cx="24" cy="13" r="3.4" fill="#f0ede4" />
+            <circle cx="24" cy="35" r="3.4" fill="#1a1a1a" />
+          </svg>
+        </span>
+        Yin Yang Puzzle
+      </h1>
 
       <nav className="app__modes">
         <button
