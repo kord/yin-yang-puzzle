@@ -5,8 +5,11 @@ import './App.css'
 
 type Mode = 'design' | 'play'
 
+// Set VITE_SHOW_MODE_SWITCHER=1 to reveal the Design/Play switcher.
+const SHOW_MODE_SWITCHER = import.meta.env.VITE_SHOW_MODE_SWITCHER === '1'
+
 function App() {
-  const [mode, setMode] = useState<Mode>('design')
+  const [mode, setMode] = useState<Mode>('play')
 
   return (
     <div className="app">
@@ -22,24 +25,26 @@ function App() {
         Yin Yang Puzzle
       </h1>
 
-      <nav className="app__modes">
-        <button
-          type="button"
-          className={`app__mode ${mode === 'design' ? 'app__mode--active' : ''}`}
-          onClick={() => setMode('design')}
-        >
-          Design
-        </button>
-        <button
-          type="button"
-          className={`app__mode ${mode === 'play' ? 'app__mode--active' : ''}`}
-          onClick={() => setMode('play')}
-        >
-          Play
-        </button>
-      </nav>
+      {SHOW_MODE_SWITCHER && (
+        <nav className="app__modes">
+          <button
+            type="button"
+            className={`app__mode ${mode === 'design' ? 'app__mode--active' : ''}`}
+            onClick={() => setMode('design')}
+          >
+            Design
+          </button>
+          <button
+            type="button"
+            className={`app__mode ${mode === 'play' ? 'app__mode--active' : ''}`}
+            onClick={() => setMode('play')}
+          >
+            Play
+          </button>
+        </nav>
+      )}
 
-      {mode === 'design' ? <DesignMode /> : <PlayMode />}
+      {SHOW_MODE_SWITCHER && mode === 'design' ? <DesignMode /> : <PlayMode />}
     </div>
   )
 }

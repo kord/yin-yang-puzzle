@@ -446,7 +446,7 @@ function PlayMode() {
                         </button>
                     ))}
                 </div>
-
+                {/* 
                 <p className="app__text">
                     <strong>Left-click</strong> cycles
                     <br />
@@ -459,11 +459,10 @@ function PlayMode() {
                 </p>
                 <p className="app__text">
                     <strong>Z</strong> undoes · <strong>R</strong> resets.
-                </p>
+                </p> */}
                 <p className="app__text">
-                    Fill every cell so the stones form a valid
-                    <br />
-                    Yin-Yang pattern.
+                    Fill every cell <strong>black</strong> or <strong>white</strong> so each
+                    color forms one connected group and no 2×2 block  is all one color.
                 </p>
 
                 <h2 className="app__heading">Status</h2>
