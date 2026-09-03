@@ -145,6 +145,10 @@ function PlayMode() {
             }
             updatingRef.current = false
             updateViolations()
+            // A resumed board may be the full, correct solution even if it was
+            // saved without the `solved` flag (e.g. a prior save missed it).
+            // Re-validate and mark it solved, but don't re-play confetti on load.
+            if (!solvedRef.current) checkCompletion(false)
         }
 
         return () => {
@@ -369,7 +373,7 @@ function PlayMode() {
         restoreOpenCells(emptyUserCells(n * n))
     }
 
-    function checkCompletion() {
+    function checkCompletion(celebrate = true) {
         const grid = gridRef.current
         const pz = puzzleRef.current
         if (!grid || !pz) return
@@ -388,7 +392,7 @@ function PlayMode() {
         // Every cell matches the unique solution.
         solvedRef.current = true
         setStatus('Solved!')
-        setCelebrate(true)
+        setCelebrate(celebrate)
         updatingRef.current = true
         for (let r = 0; r < n; r++) {
             for (let c = 0; c < n; c++) {

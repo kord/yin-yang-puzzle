@@ -176,30 +176,26 @@ class YYSolver {
         if (!solution) {
             return null;
         }
-        const secondSolution = this.solveConnected(this.differentAssignment(solution));
-        if (secondSolution) {
-            return null; // Multiple solutions exist
-        }
-        return this.logicSolutionToYinYangSolution(solution);
-    }
-
-    /**
-     * A term that forces the full assignment to differ from `solution`, used to
-     * test whether a second, distinct solution exists. It negates the whole
-     * assignment (whites forced black, blacks forced white) rather than just the
-     * list of true vars. `getTrueVars()` only lists the white cells, so the black
-     * cells are derived from every cell variable.
-     */
-    private differentAssignment(solution: Logic.Solution): Logic.Term {
+        const { height, width } = this.puzzle.size;
         const whites = new Set(solution.getTrueVars());
-        const literals: Logic.Term[] = [];
-        for (let row = 0; row < this.puzzle.size.height; row++) {
-            for (let col = 0; col < this.puzzle.size.width; col++) {
-                const name = this.getCellVar(row, col);
-                literals.push(whites.has(name) ? name : Logic.not(name));
+        // A second, distinct solution exists iff some non-fixed cell can take the
+        // opposite colour. Scan for the first such cell and use a single-cell
+        // assumption, which `solveConnected` handles reliably. (Forbidding the
+        // whole assignment instead is fragile: the connectivity refutation can get
+        // stuck cycling through disconnected models and wrongly deem a non-unique
+        // puzzle unique.)
+        for (let r = 0; r < height; r++) {
+            for (let c = 0; c < width; c++) {
+                if (this.puzzle.fixedWhites[r][c] || this.puzzle.fixedBlacks[r][c]) continue;
+                const name = this.getCellVar(r, c);
+                const opposite = whites.has(name) ? Logic.not(name) : name;
+                const second = this.solveConnected(opposite);
+                if (second) {
+                    return null; // Multiple solutions exist
+                }
             }
         }
-        return Logic.not(Logic.and(...literals));
+        return this.logicSolutionToYinYangSolution(solution);
     }
 
     /**
