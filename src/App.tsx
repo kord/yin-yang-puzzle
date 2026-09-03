@@ -64,7 +64,7 @@ function App() {
       rows: size,
       cols: size,
       kinds: { square: true, edge: false, vertex: false },
-      paintCycle: { square: ['activated', 'inactivated'] },
+      paintButtons: { square: { 0: 'activated', 2: 'inactivated' } },
       onStateChange: (ref, state) => {
         if (updatingRef.current) return
         if (statusRef.current) statusRef.current.textContent = `(${ref.row},${ref.col}) → ${state}`
@@ -250,12 +250,18 @@ function App() {
           </div>
 
           <p className="app__text">
-            <strong>Left-drag</strong> to place stones, cycling
+            <strong>Left-drag</strong> to place a
             <br />
-            <code className="app__code">black → white</code>.
+            <code className="app__code">black</code> stone.
           </p>
           <p className="app__text">
-            <strong>Right-drag</strong> (or <kbd className="app__key">Ctrl</kbd>/<kbd className="app__key">Shift</kbd>+click)
+            <strong>Right-drag</strong> to place a
+            <br />
+            <code className="app__code">white</code> stone.
+          </p>
+          <p className="app__text">
+            <strong>Middle-click</strong> (or{' '}
+            <kbd className="app__key">Ctrl</kbd>/<kbd className="app__key">Shift</kbd>+click)
             clears a stone.
           </p>
           <p className="app__text">

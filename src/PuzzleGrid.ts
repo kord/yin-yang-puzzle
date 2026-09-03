@@ -45,6 +45,12 @@ export interface PuzzleGridOptions {
     defaultState?: Partial<Record<ElementKind, ElementState>>
     /** Per-kind order in which painting cycles through states. */
     paintCycle?: Partial<Record<ElementKind, ElementState[]>>
+    /**
+     * Map a pointer button (0=left, 1=middle, 2=right) to the state it paints
+     * for a given kind. When set for a button, painting uses that state
+     * directly instead of cycling; click-drag keeps the chosen state.
+     */
+    paintButtons?: Partial<Record<ElementKind, Partial<Record<number, ElementState>>>>
     /** Per-kind flag that locks an entire kind against painting. */
     immutable?: Partial<Record<ElementKind, boolean>>
     /**
@@ -68,6 +74,7 @@ export class PuzzleGrid {
     private readonly innerGap: number
     private readonly defaultState: Record<ElementKind, ElementState>
     private readonly paintCycle: Record<ElementKind, ElementState[]>
+    private readonly paintButtons: Record<ElementKind, Partial<Record<number, ElementState>>>
     private readonly immutableMap: Record<ElementKind, boolean>
     private readonly visibleKinds: Record<ElementKind, boolean>
     private readonly onStateChange?: (ref: ElementRef, state: ElementState) => void
@@ -98,6 +105,11 @@ export class PuzzleGrid {
             square: options.paintCycle?.square ?? DEFAULT_CYCLE,
             edge: options.paintCycle?.edge ?? DEFAULT_CYCLE,
             vertex: options.paintCycle?.vertex ?? DEFAULT_CYCLE,
+        }
+        this.paintButtons = {
+            square: options.paintButtons?.square ?? {},
+            edge: options.paintButtons?.edge ?? {},
+            vertex: options.paintButtons?.vertex ?? {},
         }
         this.immutableMap = {
             square: options.immutable?.square ?? false,
@@ -520,8 +532,10 @@ export class PuzzleGrid {
         const ref = this.refFromTarget(e.target as Element | null)
         if (!ref) return
 
-        const erase = e.button === 2 || e.ctrlKey || e.metaKey || e.shiftKey
-        this.paintState = erase ? 'untouched' : this.nextPaintState(ref)
+        const erase = e.button === 1 || e.ctrlKey || e.metaKey || e.shiftKey
+        this.paintState = erase
+            ? 'untouched'
+            : this.paintButtons[ref.kind]?.[e.button] ?? this.nextPaintState(ref)
         this.painting = true
         this.lastPaintedId = null
         this.applyPaint(ref)
