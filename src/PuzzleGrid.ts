@@ -46,11 +46,12 @@ export interface PuzzleGridOptions {
     /** Per-kind order in which painting cycles through states. */
     paintCycle?: Partial<Record<ElementKind, ElementState[]>>
     /**
-     * Map a pointer button (0=left, 1=middle, 2=right) to the state it paints
-     * for a given kind. When set for a button, painting uses that state
-     * directly instead of cycling; click-drag keeps the chosen state.
+     * Map a pointer button (0=left, 1=middle, 2=right) to what it paints for a
+     * given kind. A single state paints that state directly; an array is a
+     * cycle through those states (include `untouched` to wrap back to blank), so
+     * repeated clicks advance through it and wrap around.
      */
-    paintButtons?: Partial<Record<ElementKind, Partial<Record<number, ElementState>>>>
+    paintButtons?: Partial<Record<ElementKind, Partial<Record<number, ElementState | ElementState[]>>>>
     /** Per-kind flag that locks an entire kind against painting. */
     immutable?: Partial<Record<ElementKind, boolean>>
     /**
@@ -74,7 +75,7 @@ export class PuzzleGrid {
     private readonly innerGap: number
     private readonly defaultState: Record<ElementKind, ElementState>
     private readonly paintCycle: Record<ElementKind, ElementState[]>
-    private readonly paintButtons: Record<ElementKind, Partial<Record<number, ElementState>>>
+    private readonly paintButtons: Record<ElementKind, Partial<Record<number, ElementState | ElementState[]>>>
     private readonly immutableMap: Record<ElementKind, boolean>
     private readonly visibleKinds: Record<ElementKind, boolean>
     private readonly onStateChange?: (ref: ElementRef, state: ElementState) => void
@@ -535,7 +536,7 @@ export class PuzzleGrid {
         const erase = e.button === 1 || e.ctrlKey || e.metaKey || e.shiftKey
         this.paintState = erase
             ? 'untouched'
-            : this.paintButtons[ref.kind]?.[e.button] ?? this.nextPaintState(ref)
+            : this.resolvePaintState(ref, this.paintButtons[ref.kind]?.[e.button])
         this.painting = true
         this.lastPaintedId = null
         this.applyPaint(ref)
@@ -558,12 +559,23 @@ export class PuzzleGrid {
         e.preventDefault()
     }
 
-    private nextPaintState(ref: ElementRef): ElementState {
-        const cycle = this.paintCycle[ref.kind]
-        const current = this.getState(ref)
+    private resolvePaintState(
+        ref: ElementRef,
+        mapped: ElementState | ElementState[] | undefined,
+    ): ElementState {
+        if (mapped === undefined) return this.nextPaintState(ref)
+        if (Array.isArray(mapped)) return this.nextInCycle(mapped, this.getState(ref))
+        return mapped
+    }
+
+    private nextInCycle(cycle: ElementState[], current: ElementState): ElementState {
         const idx = cycle.indexOf(current)
         if (idx === -1) return cycle[0]
         return cycle[(idx + 1) % cycle.length]
+    }
+
+    private nextPaintState(ref: ElementRef): ElementState {
+        return this.nextInCycle(this.paintCycle[ref.kind], this.getState(ref))
     }
 
     private isImmutable(ref: ElementRef): boolean {
