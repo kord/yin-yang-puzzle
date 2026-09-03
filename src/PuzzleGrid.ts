@@ -81,6 +81,7 @@ export class PuzzleGrid {
     private readonly readonlyCells = new Set<string>()
     private readonly inferredCells = new Set<string>()
     private readonly givenCells = new Set<string>()
+    private readonly violationCells = new Set<string>()
     private readonly elements = new Map<string, SVGGElement>()
     private readonly xOverlays = new Map<string, SVGGElement>()
 
@@ -185,6 +186,35 @@ export class PuzzleGrid {
         this.updateElement(id, this.getState(ref))
     }
 
+    /**
+     * Mark cells that currently break the "no 2×2 same-color block" rule so they
+     * can be haloed. Pass the full set of offending cells; cells that are no
+     * longer offending are cleared. This does not trigger onStateChange.
+     */
+    setViolations(violations: ElementRef[]): void {
+        const newIds = new Set(violations.map((ref) => this.elementId(ref)))
+
+        for (const id of [...this.violationCells]) {
+            if (!newIds.has(id)) {
+                this.violationCells.delete(id)
+                this.updateElement(id, this.stateForId(id))
+            }
+        }
+
+        for (const ref of violations) {
+            const id = this.elementId(ref)
+            if (!this.violationCells.has(id)) {
+                this.violationCells.add(id)
+                this.updateElement(id, this.stateForId(id))
+            }
+        }
+    }
+
+    private stateForId(id: string): ElementState {
+        const kind = this.kindFromId(id).kind
+        return this.states.get(id) ?? this.defaultState[kind]
+    }
+
     /** Whether this element is currently shown as a solver-inferred hint. */
     getInferred(ref: ElementRef): boolean {
         return this.inferredCells.has(this.elementId(ref))
@@ -223,6 +253,7 @@ export class PuzzleGrid {
         this.inferredCells.clear()
         this.readonlyCells.clear()
         this.givenCells.clear()
+        this.violationCells.clear()
         const ids = [...this.states.keys()]
         for (const id of ids) {
             this.states.delete(id)
@@ -310,7 +341,22 @@ export class PuzzleGrid {
         const defs = this.createSvgEl('defs', {}) as SVGDefsElement
         defs.appendChild(this.createGradient('pg-black-stone', '#5a5a5a', '#000000'))
         defs.appendChild(this.createGradient('pg-white-stone', '#ffffff', '#e2e2e2'))
+        defs.appendChild(this.createGlowFilter('pg-red-glow'))
         svg.appendChild(defs)
+    }
+
+    private createGlowFilter(id: string): SVGFilterElement {
+        const filter = this.createSvgEl('filter', {
+            id,
+            x: '-60%',
+            y: '-60%',
+            width: '220%',
+            height: '220%',
+        }) as SVGFilterElement
+        filter.appendChild(
+            this.createSvgEl('feGaussianBlur', { stdDeviation: String(this.cellSize * 0.14) }) as SVGFilterElement,
+        )
+        return filter
     }
 
     private createGradient(id: string, from: string, to: string): SVGGradientElement {
@@ -409,6 +455,17 @@ export class PuzzleGrid {
                         cx: String(cx),
                         cy: String(cy),
                         r: String(radius * 1.2),
+                    }),
+                )
+
+                // Red violation halo (shown when this stone is part of a 2×2
+                // same-color block). Sits behind the stone and glows red via CSS.
+                g.appendChild(
+                    this.createSvgEl('circle', {
+                        class: 'puzzle-grid__violation-halo',
+                        cx: String(cx),
+                        cy: String(cy),
+                        r: String(radius * 1.4),
                     }),
                 )
 
@@ -560,7 +617,8 @@ export class PuzzleGrid {
         const isInferred = this.inferredCells.has(id)
         const givenClass = this.givenCells.has(id) ? ` ${kindClass}--given` : ''
         const inferredClass = isInferred ? ` ${kindClass}--inferred` : ''
-        return `${kindClass}${orientationClass}${stateClass}${givenClass}${inferredClass}`
+        const violationClass = this.violationCells.has(id) ? ` ${kindClass}--violation` : ''
+        return `${kindClass}${orientationClass}${stateClass}${givenClass}${inferredClass}${violationClass}`
     }
 
     // -------------------------------------------------------------------------

@@ -102,6 +102,7 @@ function PlayMode() {
                 commitHistory()
                 checkCompletion()
                 userCellsRef.current = readUserCells()
+                updateViolations()
                 scheduleSave()
             },
         })
@@ -138,6 +139,7 @@ function PlayMode() {
                 }
             }
             updatingRef.current = false
+            updateViolations()
         }
 
         return () => {
@@ -342,6 +344,7 @@ function PlayMode() {
                 }
             }
         }
+        updateViolations()
         saveProgress()
     }
 
@@ -389,6 +392,41 @@ function PlayMode() {
         }
         updatingRef.current = false
         refreshCompletedSizes()
+    }
+
+    /**
+     * Find every 2×2 block whose four stones are the same (non-empty) color and
+     * tell the grid to halo those stones red. Re-run after any board change.
+     */
+    function updateViolations() {
+        const grid = gridRef.current
+        if (!grid) return
+        const n = sizeRef.current
+        const color = (r: number, c: number): 'b' | 'w' | null => {
+            const state = grid.getState({ kind: 'square', row: r, col: c })
+            if (state === 'activated') return 'b'
+            if (state === 'inactivated') return 'w'
+            return null
+        }
+        const seen = new Set<string>()
+        const violations: ElementRef[] = []
+        for (let r = 0; r < n - 1; r++) {
+            for (let c = 0; c < n - 1; c++) {
+                const a = color(r, c)
+                if (!a) continue
+                if (color(r, c + 1) === a && color(r + 1, c) === a && color(r + 1, c + 1) === a) {
+                    const pts = [[r, c], [r, c + 1], [r + 1, c], [r + 1, c + 1]] as const
+                    for (const [rr, cc] of pts) {
+                        const key = `${rr}:${cc}`
+                        if (!seen.has(key)) {
+                            seen.add(key)
+                            violations.push({ kind: 'square', row: rr, col: cc })
+                        }
+                    }
+                }
+            }
+        }
+        grid.setViolations(violations)
     }
 
     function refreshCompletedSizes() {

@@ -53,6 +53,21 @@
     fill: #906f37a4;
 }
 
+/* Stones that break the no-2×2 same-color rule glow soft red. */
+.puzzle-grid__violation-halo {
+    fill: transparent;
+    stroke: none;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.puzzle-grid__square--violation .puzzle-grid__violation-halo {
+    opacity: 1;
+    fill: rgba(255, 30, 30, 0.55);
+    filter: url(#pg-red-glow);
+}
+
 .puzzle-grid__edge .puzzle-grid__shape {
     pointer-events: none;
     /* the hit area handles edge interaction */
