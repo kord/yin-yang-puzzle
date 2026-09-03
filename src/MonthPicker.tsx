@@ -5,6 +5,7 @@ interface MonthPickerProps {
     max?: string
     disabled?: boolean
     onSelect: (date: string) => void
+    isCompleted?: (date: string) => boolean
 }
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
@@ -26,7 +27,7 @@ function fmt(date: Date): string {
  * The date is chosen only by clicking a day (no free-text entry); prev/next
  * buttons move one month at a time. Clicking outside closes the dropdown.
  */
-export default function MonthPicker({ value, max, disabled, onSelect }: MonthPickerProps) {
+export default function MonthPicker({ value, max, disabled, onSelect, isCompleted }: MonthPickerProps) {
     const selected = toDate(value)
     const maxDate = max ? toDate(max) : null
     const [open, setOpen] = useState(false)
@@ -144,12 +145,13 @@ export default function MonthPicker({ value, max, disabled, onSelect }: MonthPic
                             if (!dateStr) return <div key={i} className="month-picker__cell month-picker__cell--empty" />
                             const isSelected = dateStr === value
                             const isToday = dateStr === max
+                            const completed = isCompleted ? isCompleted(dateStr) : false
                             const future = max && maxDate ? dateStr > max : false
                             return (
                                 <button
                                     key={i}
                                     type="button"
-                                    className={`month-picker__cell${isSelected ? ' month-picker__cell--selected' : ''}${isToday ? ' month-picker__cell--today' : ''}`}
+                                    className={`month-picker__cell${isSelected ? ' month-picker__cell--selected' : ''}${completed ? ' month-picker__cell--completed' : ''}${isToday ? ' month-picker__cell--today' : ''}`}
                                     disabled={disabled || future}
                                     onClick={() => pick(dateStr)}
                                 >

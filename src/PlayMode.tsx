@@ -415,6 +415,7 @@ function PlayMode() {
                         max={dailyDate()}
                         disabled={generating}
                         onSelect={(d) => generateDaily(d)}
+                        isCompleted={(d) => SIZES.every((s) => getSolvedDates(localStorage, s).includes(d))}
                     />
                 </div>
 

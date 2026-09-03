@@ -1,6 +1,6 @@
 .app {
   padding: 24px;
-  max-width: 980px;
+  /* max-width: 980px; */
   margin: 0 auto;
 }
 
@@ -416,4 +416,9 @@ body.cursor-busy * {
   background: #534f4f;
   border-color: #fff;
   font-weight: 600;
+}
+
+.month-picker__cell--completed {
+  background: #b9e4b9;
+  color: #14532d;
 }
