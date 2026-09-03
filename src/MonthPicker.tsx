@@ -68,7 +68,7 @@ export default function MonthPicker({ value, max, disabled, onSelect }: MonthPic
 
     const canNext = maxDate
         ? view.year < maxDate.getFullYear() ||
-          (view.year === maxDate.getFullYear() && view.month < maxDate.getMonth())
+        (view.year === maxDate.getFullYear() && view.month < maxDate.getMonth())
         : true
 
     const prev = () =>

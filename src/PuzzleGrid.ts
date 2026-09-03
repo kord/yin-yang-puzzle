@@ -83,6 +83,7 @@ export class PuzzleGrid {
     private readonly states = new Map<string, ElementState>()
     private readonly readonlyCells = new Set<string>()
     private readonly inferredCells = new Set<string>()
+    private readonly givenCells = new Set<string>()
     private readonly elements = new Map<string, SVGGElement>()
     private readonly xOverlays = new Map<string, SVGGElement>()
 
@@ -180,6 +181,14 @@ export class PuzzleGrid {
         return this.readonlyCells.has(this.elementId(ref))
     }
 
+    /** Mark an element as a puzzle given/clue (visually distinct from a plain lock). */
+    setGiven(ref: ElementRef, given = true): void {
+        const id = this.elementId(ref)
+        if (given) this.givenCells.add(id)
+        else this.givenCells.delete(id)
+        this.updateElement(id, this.getState(ref))
+    }
+
     /** Whether this element is currently shown as a solver-inferred hint. */
     getInferred(ref: ElementRef): boolean {
         return this.inferredCells.has(this.elementId(ref))
@@ -217,6 +226,7 @@ export class PuzzleGrid {
     reset(): void {
         this.inferredCells.clear()
         this.readonlyCells.clear()
+        this.givenCells.clear()
         const ids = [...this.states.keys()]
         for (const id of ids) {
             this.states.delete(id)
@@ -520,7 +530,7 @@ export class PuzzleGrid {
             kind === 'edge' ? ` ${kindClass}--${orientation}` : ''
         const stateClass = state === 'untouched' ? '' : ` ${kindClass}--${state}`
         const isInferred = this.inferredCells.has(id)
-        const givenClass = !isInferred && this.readonlyCells.has(id) ? ` ${kindClass}--given` : ''
+        const givenClass = this.givenCells.has(id) ? ` ${kindClass}--given` : ''
         const inferredClass = isInferred ? ` ${kindClass}--inferred` : ''
         return `${kindClass}${orientationClass}${stateClass}${givenClass}${inferredClass}`
     }

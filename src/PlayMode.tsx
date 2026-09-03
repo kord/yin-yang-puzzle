@@ -10,7 +10,6 @@ import './App.css'
 const SIZES = Array.from({ length: 9 }, (_, i) => i + 4) // 4x4 .. 12x12
 
 type GenResponse = { id: number; puzzle: YinYangPuzzleDefinition; date?: string; prefetch?: boolean }
-type Mode = 'daily' | 'random'
 
 function PlayMode() {
     const [size, setSize] = useState(6)
@@ -29,7 +28,6 @@ function PlayMode() {
     const workerRef = useRef<Worker | null>(null)
     const requestIdRef = useRef(0)
     const updatingRef = useRef(false)
-    const modeRef = useRef<Mode>('daily')
     const dateRef = useRef(dailyDate())
     const userCellsRef = useRef<UserCell[]>([])
     const solvedRef = useRef(false)
@@ -69,15 +67,13 @@ function PlayMode() {
             solvedRef.current = false
             setCelebrate(false)
             setStatus('')
-            if (modeRef.current === 'daily') {
-                const n = e.data.puzzle.size.width
-                userCellsRef.current = emptyUserCells(n * n)
-                saveDay(localStorage, n, dateRef.current, {
-                    puzzle: e.data.puzzle,
-                    userCells: userCellsRef.current,
-                    solved: false,
-                })
-            }
+            const n = e.data.puzzle.size.width
+            userCellsRef.current = emptyUserCells(n * n)
+            saveDay(localStorage, n, dateRef.current, {
+                puzzle: e.data.puzzle,
+                userCells: userCellsRef.current,
+                solved: false,
+            })
         }
         return () => {
             worker.terminate()
@@ -120,9 +116,11 @@ function PlayMode() {
                     const ref: ElementRef = { kind: 'square', row: r, col: c }
                     if (pz.fixedWhites[r][c]) {
                         grid.setState(ref, 'inactivated')
+                        grid.setGiven(ref, true)
                         grid.setReadonly(ref, true)
                     } else if (pz.fixedBlacks[r][c]) {
                         grid.setState(ref, 'activated')
+                        grid.setGiven(ref, true)
                         grid.setReadonly(ref, true)
                     } else {
                         const uc = cells[r * size + c]
@@ -150,8 +148,7 @@ function PlayMode() {
 
     // Load a puzzle on mount and whenever the size changes.
     useEffect(() => {
-        if (modeRef.current === 'daily') generateDaily(dateRef.current)
-        else generateRandom()
+        generateDaily(dateRef.current)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [size])
 
@@ -174,15 +171,15 @@ function PlayMode() {
 
     // Silently pre-generate the next-size daily puzzle in the background.
     useEffect(() => {
-        if (puzzle && modeRef.current === 'daily') prefetchNext()
+        if (puzzle) prefetchNext()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [puzzle, size])
 
-    // Mark sizes that have been completed at least once.
+    // Mark sizes completed for the currently selected date.
     useEffect(() => {
         refreshCompletedSizes()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [date])
 
     // Flush any pending daily progress when leaving Play mode.
     useEffect(() => {
@@ -192,7 +189,7 @@ function PlayMode() {
                 saveTimerRef.current = null
             }
             const pz = puzzleRef.current
-            if (pz && modeRef.current === 'daily') {
+            if (pz) {
                 saveDay(localStorage, sizeRef.current, dateRef.current, {
                     puzzle: pz,
                     userCells: userCellsRef.current,
@@ -204,7 +201,6 @@ function PlayMode() {
     }, [])
 
     function generateDaily(d: string) {
-        modeRef.current = 'daily'
         dateRef.current = d
         setDate(d)
         const n = sizeRef.current
@@ -232,28 +228,12 @@ function PlayMode() {
         workerRef.current?.postMessage({ id, size: { width: n, height: n }, seed: seedFromDateString(d) })
     }
 
-    function generateRandom() {
-        modeRef.current = 'random'
-        const n = sizeRef.current
-        userCellsRef.current = emptyUserCells(n * n)
-        solvedRef.current = false
-        historyRef.current = []
-        setCanUndo(false)
-        const id = ++requestIdRef.current
-        setGenerating(true)
-        setCelebrate(false)
-        setStatus('Generating…')
-        const seedValue = Math.floor(Math.random() * 0xffffffff)
-        workerRef.current?.postMessage({ id, size: { width: n, height: n }, seed: seedValue })
-    }
-
     /**
      * Pre-generate the puzzle one size larger than the one being played so it is
      * ready when the user scales up. Only caches daily puzzles (deterministic per
      * date) and never sets `generating`, so the busy cursor is not shown.
      */
     function prefetchNext() {
-        if (modeRef.current !== 'daily') return
         const n = sizeRef.current
         const next = n + 1
         const max = SIZES[SIZES.length - 1]
@@ -290,7 +270,7 @@ function PlayMode() {
 
     function saveProgress() {
         const pz = puzzleRef.current
-        if (!pz || modeRef.current !== 'daily') return
+        if (!pz) return
         saveDay(localStorage, sizeRef.current, dateRef.current, {
             puzzle: pz,
             userCells: userCellsRef.current,
@@ -300,7 +280,6 @@ function PlayMode() {
     }
 
     function scheduleSave() {
-        if (modeRef.current !== 'daily') return
         if (saveTimerRef.current !== null) clearTimeout(saveTimerRef.current)
         saveTimerRef.current = window.setTimeout(() => {
             saveTimerRef.current = null
@@ -389,7 +368,12 @@ function PlayMode() {
     }
 
     function refreshCompletedSizes() {
-        const completed = SIZES.filter((s) => getSolvedDates(localStorage, s).length > 0)
+        const d = dateRef.current
+        const completed = SIZES.filter((s) => {
+            if (getSolvedDates(localStorage, s).includes(d)) return true
+            // The puzzle currently on screen may not have been persisted yet.
+            return s === sizeRef.current && solvedRef.current
+        })
         setCompletedSizes(completed)
     }
 
@@ -401,9 +385,6 @@ function PlayMode() {
                 <h2 className="app__heading">Play</h2>
 
                 <div className="app__controls">
-                    <button type="button" className="app__undo" onClick={generateRandom} disabled={generating}>
-                        New Puzzle
-                    </button>
                     <button
                         type="button"
                         className="app__undo"
@@ -418,7 +399,7 @@ function PlayMode() {
                 </div>
 
                 <div className="app__datecontrol">
-                    <span className="app__datelabel">Daily</span>
+                    <span className="app__datelabel">Daily Puzzle</span>
                     <MonthPicker
                         value={date}
                         max={dailyDate()}

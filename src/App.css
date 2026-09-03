@@ -242,9 +242,9 @@
   cursor: default;
 }
 
-.app__sizebtn:not(:disabled):hover {
+/* .app__sizebtn:not(:disabled):hover {
   background: #534f4f;
-}
+} */
 
 .app__sizebtn--active {
   border-color: #fff;
@@ -258,6 +258,10 @@
   color: #14532d;
 }
 
+.app__sizebtn--completed:hover {
+  background: #5ea85e;
+}
+
 body.cursor-busy,
 body.cursor-busy * {
   cursor: progress !important;
@@ -266,6 +270,7 @@ body.cursor-busy * {
 .month-picker {
   position: relative;
   user-select: none;
+  padding-bottom: 6px;
 }
 
 .month-picker__trigger {
