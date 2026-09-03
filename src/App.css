@@ -66,6 +66,23 @@
   margin: 6px 0;
 }
 
+.app__hint {
+  font: inherit;
+  font-size: 13px;
+  color: #e6c07a;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  margin: 2px 0 4px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.app__hint:hover {
+  color: #f5d9a0;
+}
+
 .app__controls {
   display: flex;
   align-items: center;

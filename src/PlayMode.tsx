@@ -5,6 +5,7 @@ import { dailyDate, seedFromDateString } from './puzzle/seed'
 import { loadDay, saveDay, getSolvedDates, emptyUserCells } from './storage'
 import Confetti from './Confetti'
 import MonthPicker from './MonthPicker'
+import HintModal from './HintModal'
 import './App.css'
 
 const SIZES = Array.from({ length: 9 }, (_, i) => i + 4) // 4x4 .. 12x12
@@ -24,6 +25,7 @@ function PlayMode() {
     const [celebrate, setCelebrate] = useState(false)
     const [canUndo, setCanUndo] = useState(false)
     const [completedSizes, setCompletedSizes] = useState<number[]>([])
+    const [showHint, setShowHint] = useState(false)
 
     const containerRef = useRef<HTMLDivElement | null>(null)
     const gridRef = useRef<PuzzleGrid | null>(null)
@@ -503,8 +505,11 @@ function PlayMode() {
                 </p> */}
                 <p className="app__text">
                     Fill every cell <strong>black</strong> or <strong>white</strong> so each
-                    color forms one connected group and no 2×2 block  is all one color.
+                    color forms one connected group and no 2×2 block is all one color.
                 </p>
+                <button type="button" className="app__hint" onClick={() => setShowHint(true)}>
+                    Hints
+                </button>
                 <p className="app__text">
                     Idea from <a href="https://www.puzzle-yin-yang.com/">Here</a>
                 </p>
@@ -520,6 +525,7 @@ function PlayMode() {
             </aside>
 
             <Confetti active={celebrate} />
+            {showHint && <HintModal onClose={() => setShowHint(false)} />}
         </div>
     )
 }
