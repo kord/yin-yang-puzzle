@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { generateRandomPuzzle } from './generator'
 import { seedFromDateString } from './seed'
+import YYSolver from './YYSolver'
 import type { YinYangPuzzleDefinition } from './types'
 
 // Expected unique solution for the 2026-09-02 daily puzzle at 12×12.
@@ -60,6 +61,83 @@ describe('daily regression: 2026-09-02 12×12', () => {
         }
 
         // Each colour must form a single connected group.
+        expect(isConnected(g, true)).toBe(true)
+        expect(isConnected(g, false)).toBe(true)
+    })
+
+    it('matches the given/clue cells', () => {
+        const g = puzzle.solution.isWhite
+        const n = g.length
+        for (let r = 0; r < n; r++) {
+            for (let c = 0; c < n; c++) {
+                if (puzzle.fixedWhites[r][c]) expect(g[r][c]).toBe(true)
+                if (puzzle.fixedBlacks[r][c]) expect(g[r][c]).toBe(false)
+            }
+        }
+    })
+})
+
+// Expected solution for the 2026-09-04 daily puzzle at 12×12. This date was
+// previously generated as non-unique (two valid solutions); the regression
+// below guards both the exact solution AND that the puzzle is now unique.
+const EXPECTED_SOLUTION_2026_09_04 = [
+    'WWWWWWWWWWWW',
+    'WBWBWBBBBBBW',
+    'WBWBBBWWWBWW',
+    'WBBBWWWBBBBW',
+    'WWWBBBWWBWBW',
+    'WBWBWBBWWWBW',
+    'WBWWWWBBBWBW',
+    'WBBWBWWBWWWW',
+    'WWBBBBBBWBBW',
+    'WBBWWWWWWWBW',
+    'WWBWBWBWBWBW',
+    'BBBBBBBBBBBW',
+]
+
+describe('daily regression: 2026-09-04 12×12', () => {
+    let puzzle: YinYangPuzzleDefinition
+
+    beforeAll(() => {
+        puzzle = generateRandomPuzzle(SIZE, seedFromDateString('2026-09-04'))
+    }, 120000)
+
+    it('produces a unique solution (no second valid solution)', () => {
+        const solver = new YYSolver({
+            size: puzzle.size,
+            fixedWhites: puzzle.fixedWhites,
+            fixedBlacks: puzzle.fixedBlacks,
+        })
+        expect(solver.uniqueSolution()).not.toBeNull()
+    })
+
+    it('generates the expected solution', () => {
+        const render = (isWhite: boolean[][]) =>
+            isWhite.map((row) => row.map((w) => (w ? 'W' : 'B')).join(''))
+        expect(render(puzzle.solution.isWhite)).toEqual(EXPECTED_SOLUTION_2026_09_04)
+    })
+
+    it('produces a valid Yin-Yang solution (full, no 2×2 monochrome, connected)', () => {
+        const g = puzzle.solution.isWhite
+        const n = g.length
+        expect(n).toBe(12)
+        for (const row of g) expect(row).toHaveLength(12)
+
+        for (let r = 0; r < n; r++) {
+            for (let c = 0; c < n; c++) {
+                expect(typeof g[r][c]).toBe('boolean')
+            }
+        }
+
+        for (let r = 0; r < n - 1; r++) {
+            for (let c = 0; c < n - 1; c++) {
+                const a = g[r][c]
+                const monochrome =
+                    g[r][c + 1] === a && g[r + 1][c] === a && g[r + 1][c + 1] === a
+                expect(monochrome).toBe(false)
+            }
+        }
+
         expect(isConnected(g, true)).toBe(true)
         expect(isConnected(g, false)).toBe(true)
     })
