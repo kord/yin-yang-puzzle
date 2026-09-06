@@ -11,8 +11,8 @@ const RULES = [
         body: 'All black cells touch orthogonally as a single group, and so do all white cells. Don’t create a lone island, and never wall off a region so it can’t reach the rest of its colour.',
     },
     {
-        title: 'No diagonal “pinch”',
-        body: 'A 2×2 that alternates like ◼◻ / ◻◼ is forbidden. The colours would only meet at a corner, which would split one of them into two groups.',
+        title: 'No cuts',
+        body: 'A 2×2 that alternates like ◼◻ / ◻◼ is forbidden. The whites, being a single group, would wrap around to connect somehow, isolating the blacks from each other.',
     },
     {
         title: 'The border is two arcs',
