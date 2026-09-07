@@ -379,17 +379,24 @@ function PlayMode() {
         if (!grid || !pz) return
         const n = sizeRef.current
 
+        const isWhite: boolean[][] = Array.from({ length: n }, () => Array(n).fill(false))
         for (let r = 0; r < n; r++) {
             for (let c = 0; c < n; c++) {
-                const ref: ElementRef = { kind: 'square', row: r, col: c }
-                const state = grid.getState(ref)
+                const state = grid.getState({ kind: 'square', row: r, col: c })
                 if (state === 'untouched') return // board not yet full
-                const isWhite = state === 'inactivated'
-                if (isWhite !== pz.solution.isWhite[r][c]) return // a mismatch
+                isWhite[r][c] = state === 'inactivated'
             }
         }
 
-        // Every cell matches the unique solution.
+        // Accept any complete, rule-valid Yin-Yang rather than a board that exactly
+        // matches the stored `solution`. A stale/non-unique puzzle in storage can
+        // have a valid answer that differs from its recorded solution, so requiring
+        // only the actual rules (full, no 2×2, one connected group per colour) is
+        // more robust — and is equivalent for genuinely unique puzzles.
+        if (hasMonochrome2x2(isWhite)) return
+        if (!isColorConnected(isWhite, true) || !isColorConnected(isWhite, false)) return
+
+        // The board is a valid Yin-Yang solution.
         solvedRef.current = true
         setStatus('Solved!')
         setCelebrate(celebrate)
@@ -532,6 +539,55 @@ function PlayMode() {
             {showHint && <HintModal onClose={() => setShowHint(false)} />}
         </div>
     )
+}
+
+/** True if any 2×2 block is a single colour (a Yin-Yang violation). */
+function hasMonochrome2x2(isWhite: boolean[][]): boolean {
+    const n = isWhite.length
+    for (let r = 0; r < n - 1; r++) {
+        for (let c = 0; c < n - 1; c++) {
+            const a = isWhite[r][c]
+            if (isWhite[r][c + 1] === a && isWhite[r + 1][c] === a && isWhite[r + 1][c + 1] === a) {
+                return true
+            }
+        }
+    }
+    return false
+}
+
+/** True if all cells of one colour (white when `white`, else black) form a single connected group. */
+function isColorConnected(isWhite: boolean[][], white: boolean): boolean {
+    const n = isWhite.length
+    const visited = Array.from({ length: n }, () => Array(n).fill(false))
+
+    let start: [number, number] | null = null
+    for (let r = 0; r < n && !start; r++) {
+        for (let c = 0; c < n; c++) {
+            if (isWhite[r][c] === white) {
+                start = [r, c]
+                break
+            }
+        }
+    }
+    if (!start) return true
+
+    const stack: [number, number][] = [start]
+    let reached = 0
+    while (stack.length) {
+        const [r, c] = stack.pop()!
+        if (r < 0 || c < 0 || r >= n || c >= n || visited[r][c] || isWhite[r][c] !== white) continue
+        visited[r][c] = true
+        reached++
+        stack.push([r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1])
+    }
+
+    let total = 0
+    for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+            if (isWhite[r][c] === white) total++
+        }
+    }
+    return reached === total
 }
 
 export default PlayMode
