@@ -34,7 +34,11 @@ export function randomSolution(size: Size, rng: () => number = Math.random): Yin
     const total = n * n
     const k = Math.max(2, Math.min(6, Math.floor(total / 4)))
 
-    for (let attempt = 0; attempt < 8; attempt++) {
+    // Keep drawing fresh random seeds until the deterministic solver returns a
+    // valid Yin-Yang. Never fall back to a seedless solve — that always yields the
+    // same board, which would cause repeat puzzles across days. A valid board
+    // always exists, and a handful of random seeds succeeds within a few tries.
+    for (;;) {
         const cells: { row: number; col: number; white: boolean }[] = []
         const used = new Set<string>()
         while (cells.length < k) {
@@ -48,11 +52,6 @@ export function randomSolution(size: Size, rng: () => number = Math.random): Yin
         const sol = new YYSolver(seedPartial(size, cells)).anySolution()
         if (sol) return sol
     }
-
-    // Fallback: no seeds.
-    const sol = new YYSolver(seedPartial(size, [])).anySolution()
-    if (!sol) throw new Error('No yin-yang solution exists for this size')
-    return sol
 }
 
 function shuffle<T>(arr: T[], rng: () => number = Math.random): T[] {
