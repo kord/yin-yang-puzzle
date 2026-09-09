@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { PuzzleGrid, type ElementRef } from './PuzzleGrid'
-import type { UserCell, YinYangPuzzleDefinition } from './puzzle/types'
+import type { SharedPuzzle, UserCell, YinYangPuzzleDefinition } from './puzzle/types'
 import { dailyDate, seedFromDateString } from './puzzle/seed'
-import { loadDay, saveDay, getSolvedDates, emptyUserCells } from './storage'
+import { loadDay, saveDay, loadShared, saveShared, getSolvedDates, emptyUserCells } from './storage'
 import Confetti from './Confetti'
 import MonthPicker from './MonthPicker'
 import HintModal from './HintModal'
@@ -16,8 +16,8 @@ const SHOW_STATUS_BAR = import.meta.env.DEV
 type GenResponse = { id: number; puzzle: YinYangPuzzleDefinition; date?: string; prefetch?: boolean }
 
 const DEFAULT_SIZE = 6
-function PlayMode() {
-    const [size, setSize] = useState(6)
+function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
+    const [size, setSize] = useState(shared ? shared.givens.size.width : DEFAULT_SIZE)
     const [generating, setGenerating] = useState(false)
     const [puzzle, setPuzzle] = useState<YinYangPuzzleDefinition | null>(null)
     const [status, setStatus] = useState('')
@@ -40,6 +40,8 @@ function PlayMode() {
     const saveTimerRef = useRef<number | null>(null)
     const historyRef = useRef<{ cells: UserCell[]; solved: boolean }[]>([])
     const prefetchIdRef = useRef(0)
+    const sharedRef = useRef<SharedPuzzle | null>(shared ?? null)
+    const encodedRef = useRef<string>(shared?.encoded ?? '')
 
     useEffect(() => {
         sizeRef.current = size
@@ -68,15 +70,16 @@ function PlayMode() {
                 return
             }
             if (e.data.id !== requestIdRef.current) return // ignore stale results
+            const pz = e.data.puzzle
             setGenerating(false)
-            setPuzzle(e.data.puzzle)
+            setPuzzle(pz)
             solvedRef.current = false
             setCelebrate(false)
             setStatus('')
-            const n = e.data.puzzle.size.width
+            const n = pz.size.width
             userCellsRef.current = emptyUserCells(n * n)
             saveDay(localStorage, n, dateRef.current, {
-                puzzle: e.data.puzzle,
+                puzzle: pz,
                 userCells: userCellsRef.current,
                 solved: false,
             })
@@ -160,7 +163,8 @@ function PlayMode() {
 
     // Load a puzzle on mount and whenever the size changes.
     useEffect(() => {
-        generateDaily(dateRef.current)
+        if (sharedRef.current) buildSharedPuzzle()
+        else generateDaily(dateRef.current)
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [size])
 
@@ -185,7 +189,7 @@ function PlayMode() {
 
     // Silently pre-generate the next-size daily puzzle in the background.
     useEffect(() => {
-        if (puzzle) prefetchNext()
+        if (puzzle && !sharedRef.current) prefetchNext()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [puzzle, size])
 
@@ -195,7 +199,7 @@ function PlayMode() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [date])
 
-    // Flush any pending daily progress when leaving Play mode.
+    // Flush any pending progress when leaving Play mode.
     useEffect(() => {
         return () => {
             if (saveTimerRef.current !== null) {
@@ -204,12 +208,14 @@ function PlayMode() {
             }
             const pz = puzzleRef.current
             if (pz) {
-                saveDay(localStorage, sizeRef.current, dateRef.current, {
+                const record = {
                     puzzle: pz,
                     userCells: userCellsRef.current,
                     solved: solvedRef.current,
                     solvedAt: solvedRef.current ? Date.now() : undefined,
-                })
+                }
+                if (sharedRef.current) saveShared(localStorage, encodedRef.current, record)
+                else saveDay(localStorage, sizeRef.current, dateRef.current, record)
             }
         }
     }, [])
@@ -240,6 +246,45 @@ function PlayMode() {
         setCelebrate(false)
         setStatus('Loading puzzle…')
         workerRef.current?.postMessage({ id, size: { width: n, height: n }, seed: seedFromDateString(d) })
+    }
+
+    /** Load a puzzle from a share link, restoring saved progress if any. */
+    function buildSharedPuzzle() {
+        const shared = sharedRef.current
+        if (!shared) return
+        const givens = shared.givens
+        const n = givens.size.width
+        const record = loadShared(localStorage, encodedRef.current)
+        if (record && record.puzzle && record.puzzle.size.width === n) {
+            userCellsRef.current = record.userCells
+            solvedRef.current = record.solved
+            historyRef.current = []
+            setCanUndo(false)
+            setGenerating(false)
+            setPuzzle(record.puzzle)
+            setStatus(record.solved ? 'Solved!' : '')
+            setCelebrate(false)
+            return
+        }
+
+        // A share link is a unique puzzle by construction, so there's no need to
+        // solve for a recorded `solution` — completion is validated by the rules
+        // alone. Adopt the given clues directly (no worker round-trip). We cast
+        // because a shared puzzle carries no computed solution; the app never
+        // reads `puzzle.solution`, so this is safe.
+        const puzzle = {
+            size: givens.size,
+            fixedWhites: givens.fixedWhites,
+            fixedBlacks: givens.fixedBlacks,
+        } as YinYangPuzzleDefinition
+        userCellsRef.current = emptyUserCells(n * n)
+        solvedRef.current = false
+        historyRef.current = []
+        setCanUndo(false)
+        setGenerating(false)
+        setPuzzle(puzzle)
+        setStatus('')
+        setCelebrate(false)
     }
 
     /** Changing dates always starts at the smallest (4×4) puzzle. */
@@ -298,12 +343,14 @@ function PlayMode() {
     function saveProgress() {
         const pz = puzzleRef.current
         if (!pz) return
-        saveDay(localStorage, sizeRef.current, dateRef.current, {
+        const record = {
             puzzle: pz,
             userCells: userCellsRef.current,
             solved: solvedRef.current,
             solvedAt: solvedRef.current ? Date.now() : undefined,
-        })
+        }
+        if (sharedRef.current) saveShared(localStorage, encodedRef.current, record)
+        else saveDay(localStorage, sizeRef.current, dateRef.current, record)
     }
 
     function scheduleSave() {
@@ -446,6 +493,10 @@ function PlayMode() {
     }
 
     function refreshCompletedSizes() {
+        if (sharedRef.current) {
+            setCompletedSizes([])
+            return
+        }
         const d = dateRef.current
         const completed = SIZES.filter((s) => {
             if (getSolvedDates(localStorage, s).includes(d)) return true
@@ -476,30 +527,38 @@ function PlayMode() {
                     </button>
                 </div>
 
-                <div className="app__datecontrol">
-                    <span className="app__datelabel">Daily Puzzle</span>
-                    <MonthPicker
-                        value={date}
-                        max={dailyDate()}
-                        disabled={generating}
-                        onSelect={selectDate}
-                        isCompleted={(d) => SIZES.every((s) => getSolvedDates(localStorage, s).includes(d))}
-                    />
-                </div>
-
-                <div className="app__sizes">
-                    {SIZES.map((s) => (
-                        <button
-                            key={s}
-                            type="button"
-                            className={`app__sizebtn${s === size ? ' app__sizebtn--active' : ''}${completedSizes.includes(s) ? ' app__sizebtn--completed' : ''}`}
+                {shared ? (
+                    <div className="app__datecontrol">
+                        <span className="app__datelabel">Shared Puzzle</span>
+                    </div>
+                ) : (
+                    <div className="app__datecontrol">
+                        <span className="app__datelabel">Daily Puzzle</span>
+                        <MonthPicker
+                            value={date}
+                            max={dailyDate()}
                             disabled={generating}
-                            onClick={() => setSize(s)}
-                        >
-                            {s}×{s}
-                        </button>
-                    ))}
-                </div>
+                            onSelect={selectDate}
+                            isCompleted={(d) => SIZES.every((s) => getSolvedDates(localStorage, s).includes(d))}
+                        />
+                    </div>
+                )}
+
+                {!shared && (
+                    <div className="app__sizes">
+                        {SIZES.map((s) => (
+                            <button
+                                key={s}
+                                type="button"
+                                className={`app__sizebtn${s === size ? ' app__sizebtn--active' : ''}${completedSizes.includes(s) ? ' app__sizebtn--completed' : ''}`}
+                                disabled={generating}
+                                onClick={() => setSize(s)}
+                            >
+                                {s}×{s}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 {/* 
                 <p className="app__text">
                     <strong>Left-click</strong> cycles
@@ -591,3 +650,4 @@ function isColorConnected(isWhite: boolean[][], white: boolean): boolean {
 }
 
 export default PlayMode
+

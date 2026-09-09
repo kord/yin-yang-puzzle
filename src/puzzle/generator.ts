@@ -38,7 +38,7 @@ export function randomSolution(size: Size, rng: () => number = Math.random): Yin
     // valid Yin-Yang. Never fall back to a seedless solve — that always yields the
     // same board, which would cause repeat puzzles across days. A valid board
     // always exists, and a handful of random seeds succeeds within a few tries.
-    for (;;) {
+    for (; ;) {
         const cells: { row: number; col: number; white: boolean }[] = []
         const used = new Set<string>()
         while (cells.length < k) {

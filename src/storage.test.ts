@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
     getSolvedDates,
     loadDay,
+    loadShared,
     saveDay,
+    saveShared,
     type DayRecord,
     type StorageLike,
 } from './storage'
@@ -78,6 +80,20 @@ describe('storage', () => {
             'yinyang.day.6.2026-08-29',
             JSON.stringify({ version: 1, puzzle, userCells, solved: false }),
         )
+        expect(loadDay(store, 6, '2026-08-29')).toBeNull()
+    })
+
+    it('round-trips a shared puzzle record keyed by its encoded string', () => {
+        const store = memoryStorage()
+        const record: DayRecord = { puzzle, userCells, solved: true, solvedAt: 123 }
+        saveShared(store, 'ABCdef', record)
+        expect(loadShared(store, 'ABCdef')).toEqual(record)
+        expect(loadShared(store, 'other')).toBeNull()
+    })
+
+    it('does not leak shared records into daily storage', () => {
+        const store = memoryStorage()
+        saveShared(store, 'ABCdef', { puzzle, userCells, solved: false })
         expect(loadDay(store, 6, '2026-08-29')).toBeNull()
     })
 })

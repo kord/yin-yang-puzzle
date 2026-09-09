@@ -62,3 +62,25 @@ export function getSolvedDates(storage: StorageLike, size: number): string[] {
 export function emptyUserCells(n: number): UserCell[] {
     return new Array<UserCell>(n).fill('.')
 }
+
+// Shared-puzzle progress, keyed by the encoded `?p=` string so it never
+// collides with (or leaks into) the daily-puzzle storage.
+const sharedKey = (encoded: string): string => `${PUZZLENAME}.shared.${encoded}`
+
+export function loadShared(storage: StorageLike, encoded: string): DayRecord | null {
+    const raw = storage.getItem(sharedKey(encoded))
+    if (!raw) return null
+    try {
+        const parsed = JSON.parse(raw) as { version?: number } & DayRecord
+        if (parsed.version !== SCHEMA_VERSION) return null
+        const { version: _version, ...record } = parsed
+        if (!record || !Array.isArray(record.userCells)) return null
+        return record
+    } catch {
+        return null
+    }
+}
+
+export function saveShared(storage: StorageLike, encoded: string, record: DayRecord): void {
+    storage.setItem(sharedKey(encoded), JSON.stringify({ ...record, version: SCHEMA_VERSION }))
+}

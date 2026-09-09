@@ -18,6 +18,8 @@
   background-clip: text;
   color: transparent;
   filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.55));
+  cursor: pointer;
+  user-select: none;
 }
 
 .app__title-icon {
@@ -110,11 +112,36 @@
   background: #f0f0f0;
 }
 
+.app__share {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.app__copied {
+  font-size: 13px;
+  color: #2f9e44;
+}
+
 .app__sizelabel {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 14px;
+}
+
+.app__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #dcdcdc;
+}
+
+.app__toggle input {
+  accent-color: #e6c07a;
 }
 
 .app__size {
@@ -142,72 +169,6 @@
   border-radius: 4px;
   padding: 0 4px;
   background: #5f5858;
-}
-
-.app__legend {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.app__legend-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.app__swatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  border: 1px solid #bbb;
-  flex: 0 0 auto;
-}
-
-.app__swatch--untouched {
-  background: #ffffff;
-}
-
-.app__swatch--activated {
-  background: #1a1a1a;
-}
-
-.app__swatch--inactivated {
-  background: #eaeaea;
-}
-
-.app__swatch--inferred {
-  background: rgba(26, 26, 26, 0.4);
-  border-color: #9a9a9a;
-}
-
-.app__swatch--x {
-  background: #fff;
-  border-color: #c00000;
-  background-image:
-    linear-gradient(45deg, transparent 44%, #c00000 44%, #c00000 56%, transparent 56%),
-    linear-gradient(-45deg, transparent 44%, #c00000 44%, #c00000 56%, transparent 56%);
-}
-
-.app__swatch--fixed {
-  background: #fff6d6;
-  border-color: #d4a017;
-}
-
-.app__swatch--given {
-  background: #d5d5d5;
-  border-color: #a9a9a9;
-  position: relative;
-}
-
-.app__swatch--given::after {
-  content: '';
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  background: #1a1a1a;
 }
 
 .app__status {

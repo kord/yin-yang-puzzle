@@ -39,6 +39,12 @@ type YinYangPuzzleDefinition = {
 
 type UserCell = '.' | 'b' | 'w'
 
+/** A puzzle loaded from a share link (`?p=`). */
+type SharedPuzzle = {
+    encoded: string
+    givens: YinYangPuzzlePartialDefinition
+};
+
 export type {
     GridPossibility,
     Size,
@@ -48,4 +54,5 @@ export type {
     YinYangPuzzleDefinition,
     Extension,
     UserCell,
+    SharedPuzzle,
 };

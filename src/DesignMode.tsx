@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PuzzleGrid, type ElementRef, type ElementState } from './PuzzleGrid'
 import type { Extension, YinYangPuzzlePartialDefinition } from './puzzle/types'
+import { encodePuzzle } from './puzzle/encode'
 import './App.css'
 
 const SIZES = Array.from({ length: 17 }, (_, i) => i + 4) // 4x4 .. 20x20
@@ -23,6 +24,9 @@ function cloneMarks(m: Marks): Marks {
 function DesignMode() {
     const [size, setSize] = useState(6)
     const [historyLen, setHistoryLen] = useState(0)
+    const [showImplications, setShowImplications] = useState(true)
+    const [unique, setUnique] = useState(false)
+    const [copied, setCopied] = useState(false)
 
     const containerRef = useRef<HTMLDivElement | null>(null)
     const gridRef = useRef<PuzzleGrid | null>(null)
@@ -34,6 +38,8 @@ function DesignMode() {
     const marksRef = useRef<Marks>(blankMarks(size))
     const workerRef = useRef<Worker | null>(null)
     const requestIdRef = useRef(0)
+    // Mirror of `showImplications` for the (stale-closure) worker/event callbacks.
+    const showImplicationsRef = useRef(true)
 
     useEffect(() => {
         sizeRef.current = size
@@ -56,6 +62,13 @@ function DesignMode() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
+    // Re-run the deduction/hints when the show-implications toggle changes.
+    useEffect(() => {
+        showImplicationsRef.current = showImplications
+        recompute(false)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showImplications])
+
     useEffect(() => {
         const container = containerRef.current
         if (!container) return
@@ -73,6 +86,7 @@ function DesignMode() {
             onStateChange: (ref, state) => {
                 if (updatingRef.current) return
                 if (statusRef.current) statusRef.current.textContent = `(${ref.row},${ref.col}) → ${state}`
+                setUnique(false) // a fresh placement invalidates any prior uniqueness
                 scheduleRecompute()
             },
         })
@@ -134,11 +148,22 @@ function DesignMode() {
             marks.whites.some((row) => row.some(Boolean)) ||
             marks.blacks.some((row) => row.some(Boolean))
 
+        // If implications are hidden, skip the (slow) solver and clear any hints.
+        if (!showImplicationsRef.current) {
+            updatingRef.current = true
+            grid.applyHints([])
+            updatingRef.current = false
+            setUnique(false)
+            if (statusRef.current) statusRef.current.textContent = 'Implications hidden'
+            return
+        }
+
         // With no placements there is nothing to deduce, so skip the (slow) solve.
         if (!hasMark) {
             updatingRef.current = true
             grid.applyHints([])
             updatingRef.current = false
+            setUnique(false)
             if (statusRef.current) statusRef.current.textContent = '—'
             return
         }
@@ -150,6 +175,7 @@ function DesignMode() {
         }
 
         const id = ++requestIdRef.current
+        setUnique(false)
         if (statusRef.current) statusRef.current.textContent = 'Solving…'
         workerRef.current?.postMessage({ id, puzzle })
     }
@@ -158,18 +184,16 @@ function DesignMode() {
         const grid = gridRef.current
         if (!grid) return
         const n = sizeRef.current
-        const marks = marksRef.current
-        const hasMark =
-            marks.whites.some((row) => row.some(Boolean)) ||
-            marks.blacks.some((row) => row.some(Boolean))
 
         const hints: { ref: ElementRef; state: ElementState }[] = []
-        let anyPossible = false
+        let noSolution = false
+        let multiple = false
         for (let r = 0; r < n; r++) {
             for (let c = 0; c < n; c++) {
                 const p = extensions.possibilities[r][c]
                 if (p.fixed) continue
-                if (p.whitePossible || p.blackPossible) anyPossible = true
+                if (!p.whitePossible && !p.blackPossible) noSolution = true
+                if (p.whitePossible && p.blackPossible) multiple = true
                 if (p.whitePossible && !p.blackPossible) {
                     hints.push({ ref: { kind: 'square', row: r, col: c }, state: 'inactivated' })
                 } else if (p.blackPossible && !p.whitePossible) {
@@ -178,12 +202,23 @@ function DesignMode() {
             }
         }
 
+        const show = showImplicationsRef.current
         updatingRef.current = true
-        grid.applyHints(hints)
+        grid.applyHints(show ? hints : [])
         updatingRef.current = false
 
+        setUnique(show && !noSolution && !multiple)
+
         if (statusRef.current) {
-            statusRef.current.textContent = hasMark && !anyPossible ? 'No solution' : 'Done'
+            if (!show) {
+                statusRef.current.textContent = 'Implications hidden'
+            } else if (noSolution) {
+                statusRef.current.textContent = 'No solution'
+            } else if (multiple) {
+                statusRef.current.textContent = 'Multiple solutions'
+            } else {
+                statusRef.current.textContent = 'Unique solution'
+            }
         }
     }
 
@@ -219,6 +254,25 @@ function DesignMode() {
         if (statusRef.current) statusRef.current.textContent = 'Undo'
     }
 
+    function copyShareLink() {
+        const n = sizeRef.current
+        const marks = readMarks()
+        const link = `${window.location.origin}${window.location.pathname}?p=${encodePuzzle({
+            size: { width: n, height: n },
+            fixedWhites: marks.whites,
+            fixedBlacks: marks.blacks,
+        })}`
+        navigator.clipboard
+            .writeText(link)
+            .then(() => {
+                setCopied(true)
+                window.setTimeout(() => setCopied(false), 1500)
+            })
+            .catch(() => {
+                if (statusRef.current) statusRef.current.textContent = 'Could not copy link'
+            })
+    }
+
     return (
         <div className="app__layout">
             <div ref={containerRef} className="app__grid" />
@@ -249,6 +303,26 @@ function DesignMode() {
                             ))}
                         </select>
                     </label>
+                    <label className="app__toggle">
+                        <input
+                            type="checkbox"
+                            checked={showImplications}
+                            onChange={(e) => setShowImplications(e.target.checked)}
+                        />
+                        Show implications
+                    </label>
+                </div>
+
+                <div className="app__share">
+                    <button
+                        type="button"
+                        className="app__undo"
+                        onClick={copyShareLink}
+                        disabled={!unique}
+                    >
+                        Share
+                    </button>
+                    {copied && <span className="app__copied">Link copied!</span>}
                 </div>
 
                 <p className="app__text">
@@ -267,17 +341,9 @@ function DesignMode() {
                     clears a stone.
                 </p>
                 <p className="app__text">
-                    <strong>Dimmed stones</strong> are forced by the rules from your
-                    placements.
+                    <strong>Dimmed stones</strong> are the rules' implications of your
+                    placements (shown while &ldquo;Show implications&rdquo; is on).
                 </p>
-
-                <h2 className="app__heading">Legend</h2>
-                <ul className="app__legend">
-                    <li className="app__legend-item"><span className="app__swatch app__swatch--untouched" /> empty</li>
-                    <li className="app__legend-item"><span className="app__swatch app__swatch--activated" /> black</li>
-                    <li className="app__legend-item"><span className="app__swatch app__swatch--inactivated" /> white</li>
-                    <li className="app__legend-item"><span className="app__swatch app__swatch--inferred" /> forced (hint)</li>
-                </ul>
 
                 <h2 className="app__heading">Status</h2>
                 <p className="app__status"><span ref={statusRef}>—</span></p>
