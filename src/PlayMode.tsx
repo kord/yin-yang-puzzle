@@ -581,6 +581,11 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
                     Hints
                 </button>
                 <p className="app__text">
+                    <a href="?mode=design" target="_blank" rel="noopener noreferrer">
+                        Puzzle Designer
+                    </a>
+                </p>
+                <p className="app__text">
                     Idea from <a href="https://www.puzzle-yin-yang.com/">Here</a>
                 </p>
 

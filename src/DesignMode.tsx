@@ -27,6 +27,7 @@ function DesignMode() {
     const [showImplications, setShowImplications] = useState(true)
     const [unique, setUnique] = useState(false)
     const [copied, setCopied] = useState(false)
+    const [hasMarks, setHasMarks] = useState(false)
 
     const containerRef = useRef<HTMLDivElement | null>(null)
     const gridRef = useRef<PuzzleGrid | null>(null)
@@ -99,7 +100,9 @@ function DesignMode() {
         recompute(false)
 
         const onKey = (e: KeyboardEvent) => {
-            if (e.key.toLowerCase() === 'z' && !e.shiftKey) undo()
+            const k = e.key.toLowerCase()
+            if (k === 'z' && !e.shiftKey) undo()
+            else if (k === 'r' && !e.shiftKey) reset()
         }
         window.addEventListener('keydown', onKey)
 
@@ -147,6 +150,7 @@ function DesignMode() {
         const hasMark =
             marks.whites.some((row) => row.some(Boolean)) ||
             marks.blacks.some((row) => row.some(Boolean))
+        setHasMarks(hasMark)
 
         // If implications are hidden, skip the (slow) solver and clear any hints.
         if (!showImplicationsRef.current) {
@@ -254,6 +258,30 @@ function DesignMode() {
         if (statusRef.current) statusRef.current.textContent = 'Undo'
     }
 
+    function reset() {
+        const marks = readMarks()
+        const hasMark =
+            marks.whites.some((row) => row.some(Boolean)) ||
+            marks.blacks.some((row) => row.some(Boolean))
+        if (!hasMark) return
+
+        // Commit the current board so the reset is undoable (Z reverts it).
+        historyRef.current.push(cloneMarks(marks))
+        if (historyRef.current.length > 200) historyRef.current.shift()
+        setHistoryLen(historyRef.current.length)
+
+        const grid = gridRef.current
+        if (!grid) return
+        const n = sizeRef.current
+        updatingRef.current = true
+        grid.reset()
+        updatingRef.current = false
+        marksRef.current = blankMarks(n)
+        setHasMarks(false)
+        recompute(false)
+        if (statusRef.current) statusRef.current.textContent = 'Reset'
+    }
+
     function copyShareLink() {
         const n = sizeRef.current
         const marks = readMarks()
@@ -278,7 +306,7 @@ function DesignMode() {
             <div ref={containerRef} className="app__grid" />
 
             <aside className="app__panel">
-                <h2 className="app__heading">Controls</h2>
+                <h2 className="app__heading">Designer Controls</h2>
 
                 <div className="app__controls">
                     <button
@@ -288,6 +316,14 @@ function DesignMode() {
                         disabled={historyLen === 0}
                     >
                         Undo (Z)
+                    </button>
+                    <button
+                        type="button"
+                        className="app__undo"
+                        onClick={reset}
+                        disabled={!hasMarks}
+                    >
+                        Reset
                     </button>
                     <label className="app__sizelabel">
                         Size
@@ -325,21 +361,6 @@ function DesignMode() {
                     {copied && <span className="app__copied">Link copied!</span>}
                 </div>
 
-                <p className="app__text">
-                    <strong>Left-drag</strong> cycles a cell
-                    <br />
-                    <code className="app__code">empty → black → white</code>.
-                </p>
-                <p className="app__text">
-                    <strong>Right-drag</strong> cycles the other way
-                    <br />
-                    <code className="app__code">empty → white → black</code>.
-                </p>
-                <p className="app__text">
-                    <strong>Middle-click</strong> (or{' '}
-                    <kbd className="app__key">Ctrl</kbd>/<kbd className="app__key">Shift</kbd>+click)
-                    clears a stone.
-                </p>
                 <p className="app__text">
                     <strong>Dimmed stones</strong> are the rules' implications of your
                     placements (shown while &ldquo;Show implications&rdquo; is on).

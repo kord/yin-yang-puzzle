@@ -182,32 +182,6 @@
   min-height: 18px;
 }
 
-.app__modes {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.app__mode {
-  font: inherit;
-  font-size: 14px;
-  padding: 6px 16px;
-  border-radius: 6px;
-  border: 1px solid #837979;
-  background: #3b3131;
-  cursor: pointer;
-}
-
-.app__mode:hover {
-  background: #534f4f;
-}
-
-.app__mode--active {
-  background: #6e6767;
-  border-color: #888;
-  font-weight: 600;
-}
-
 .confetti {
   position: fixed;
   inset: 0;
