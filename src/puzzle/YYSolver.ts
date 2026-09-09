@@ -1,6 +1,11 @@
 import Logic from "logic-solver";
 import type { Extension, GridPossibility, Location, YinYangPuzzlePartialDefinition, YinYangPuzzleSolution } from "./types";
 
+// `extensions()` (used by the design tool to show implications) needs exact
+// answers, so it gives the connectivity refutation a much larger budget than
+// the generator's quick `anySolution`/`uniqueSolution` (which keep the default).
+const EXTENSIONS_MAX_ITERATIONS = 5000;
+
 class YYSolver {
     private puzzle: YinYangPuzzlePartialDefinition
     private solver: Logic.Solver
@@ -259,9 +264,12 @@ class YYSolver {
      * are not each a single connected group by forbidding that model and re-solving.
      * This makes connectivity exact (the edge-count "tree" constraint alone is not
      * sufficient — it can be satisfied by a cyclic component + a detached cell).
+     *
+     * The refutation can need many iterations before it reaches a connected model,
+     * so callers that need exact answers can pass a larger `maxIterations`.
      */
-    private solveConnected(assumption?: Logic.Term): Logic.Solution | null {
-        for (let i = 0; i < 500; i++) {
+    private solveConnected(assumption?: Logic.Term, maxIterations = 500): Logic.Solution | null {
+        for (let i = 0; i < maxIterations; i++) {
             const solution = assumption ? this.solver.solveAssuming(assumption) : this.solver.solve();
             if (!solution) return null;
             if (this.isConnectedSolution(solution)) return solution;
@@ -303,7 +311,7 @@ class YYSolver {
 
         // Seed from any one connected solution: every cell then already knows one
         // colour it can take, so we only ever need to test the *other* colour.
-        const seed = this.solveConnected();
+        const seed = this.solveConnected(undefined, EXTENSIONS_MAX_ITERATIONS);
         if (seed) apply(seed);
 
         // For each cell, resolve only the possibility we haven't established yet.
@@ -314,11 +322,11 @@ class YYSolver {
 
                 if (poss.whitePossible) {
                     // Only white known; test whether black is possible.
-                    const solution = this.solveConnected(Logic.not(this.getCellVar(r, c)));
+                    const solution = this.solveConnected(Logic.not(this.getCellVar(r, c)), EXTENSIONS_MAX_ITERATIONS);
                     if (solution) apply(solution);
                 } else if (poss.blackPossible) {
                     // Only black known; test whether white is possible.
-                    const solution = this.solveConnected(this.getCellVar(r, c));
+                    const solution = this.solveConnected(this.getCellVar(r, c), EXTENSIONS_MAX_ITERATIONS);
                     if (solution) apply(solution);
                 }
             }
