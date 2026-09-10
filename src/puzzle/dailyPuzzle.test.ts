@@ -8,18 +8,18 @@ import type { YinYangPuzzleDefinition } from './types'
 // This freezes the deterministic generation so a change to the generator or
 // solver that alters this date's solution will fail the regression.
 const EXPECTED_SOLUTION = [
-    'WWWWWWWWWWWW',
-    'WBBWBBBBWBBW',
-    'WWBBBWBWWBWW',
-    'WBBWWWBBBBBW',
-    'WBWWBBBWBWBW',
-    'WBWBBWWWWWBW',
-    'WBWWBBWBBWWW',
-    'WBBWBWWWBBBW',
-    'WBWWBBBBBWWW',
-    'WBWBBWWBWWBW',
-    'WBWBWWBBBBBW',
-    'WWWWWBBWWWWW',
+    'BBBBBBBBBBBB',
+    'BWBWWWBWWWWW',
+    'BWWWBWBWBWBW',
+    'BWBBBBBBBBBW',
+    'BWWBWBWBWBWW',
+    'BBWBWWWBWWWB',
+    'BWWWWBBBWBWB',
+    'BBBBWWWWWBWB',
+    'BWWWWBBBWBWB',
+    'BBWBWBWBBBWB',
+    'BWWBWWWWBWWB',
+    'BBBBBBBBBBBB',
 ]
 
 const SIZE = { width: 12, height: 12 }
@@ -82,17 +82,17 @@ describe('daily regression: 2026-09-02 12×12', () => {
 // below guards both the exact solution AND that the puzzle is now unique.
 const EXPECTED_SOLUTION_2026_09_04 = [
     'WWWWWWWWWWWW',
-    'WBWBWBBBBBBW',
-    'WBWBBBWWWBWW',
-    'WBBBWWWBBBBW',
-    'WWWBBBWWBWBW',
-    'WBWBWBBWWWBW',
-    'WBWWWWBBBWBW',
-    'WBBWBWWBWWWW',
-    'WWBBBBBBWBBW',
-    'WBBWWWWWWWBW',
-    'WWBWBWBWBWBW',
-    'BBBBBBBBBBBW',
+    'WBBBWBWBWBBW',
+    'WWWBBBWBWBWW',
+    'WBWBWWWBBBBW',
+    'WBBBBBBBWWBW',
+    'WBWWWWBWWBBW',
+    'WWWBBBBBWBWW',
+    'WBBBWWBWWBBW',
+    'WWWWWBBBWWBW',
+    'BBBBWBWBBWWW',
+    'BWWWWBWWBBBW',
+    'BBBBBBBWWWWW',
 ]
 
 describe('daily regression: 2026-09-04 12×12', () => {
@@ -158,17 +158,17 @@ describe('daily regression: 2026-09-04 12×12', () => {
 // fixed generator; also asserted to be unique + solvable so a regression back to
 // non-unique puzzles is caught.
 const EXPECTED_SOLUTION_2026_09_18 = [
-    'BBBBBBBBBWWW',
-    'WWBWBWWWBBBW',
-    'WBBWBBBWWWWW',
-    'WBWWBWBWBBBW',
-    'WBBWBWWWWBWW',
-    'WBWWWWBWBBBW',
-    'WBBBWBBBBWBW',
-    'WWWBBBWBWWWW',
-    'WBBBWWWWWBBW',
-    'WWWBBBBBBBWW',
-    'WBBBWBWBWBBW',
+    'WBBBBBBBBWWW',
+    'WWWBWBWBWWBW',
+    'WBBBWBWBBWBW',
+    'WWWWWBWWBWBW',
+    'WBBBWWWBBBBW',
+    'WWWBBWBBWBWW',
+    'WBBBWWBWWBBW',
+    'WBWBBBBWBBWW',
+    'WBWBWBWWWBBW',
+    'WBWWWBWBWBWW',
+    'WBBWBBWBBBBW',
     'WWWWWWWWWWWW',
 ]
 

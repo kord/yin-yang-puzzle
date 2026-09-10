@@ -259,21 +259,111 @@ class YYSolver {
         return Logic.and(...literals);
     }
 
+    /** Connected components of one colour (4-connectivity). */
+    private colorComponents(whiteSet: Set<string>, white: boolean): [number, number][][] {
+        const { height, width } = this.puzzle.size;
+        const visited = new Set<string>();
+        const comps: [number, number][][] = [];
+        for (let r = 0; r < height; r++) {
+            for (let c = 0; c < width; c++) {
+                if (whiteSet.has(this.getCellVar(r, c)) !== white) continue;
+                const key = `${r},${c}`;
+                if (visited.has(key)) continue;
+                const comp: [number, number][] = [];
+                const stack: [number, number][] = [[r, c]];
+                visited.add(key);
+                while (stack.length) {
+                    const [cr, cc] = stack.pop()!;
+                    comp.push([cr, cc]);
+                    for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                        const nr = cr + dr, nc = cc + dc;
+                        if (nr < 0 || nc < 0 || nr >= height || nc >= width) continue;
+                        if (whiteSet.has(this.getCellVar(nr, nc)) !== white) continue;
+                        const nkey = `${nr},${nc}`;
+                        if (visited.has(nkey)) continue;
+                        visited.add(nkey);
+                        stack.push([nr, nc]);
+                    }
+                }
+                comps.push(comp);
+            }
+        }
+        return comps;
+    }
+
+    /**
+     * Lazy connectivity cut. When a model splits a colour into several islands,
+     * forbid the whole *family* of models in which its smallest island stays an
+     * island: "either some cell of that island is not this colour, or one of the
+     * island's neighbours is this colour". Every genuinely connected colouring
+     * satisfies this, so no valid solution is lost — but it prunes far more per
+     * iteration than forbidding the single offending assignment.
+     *
+     * The local rules stay in MiniSat; connectivity (a global constraint) is
+     * handled here in JS by adding these cuts on demand.
+     *
+     * Returns the number of cuts added.
+     */
+    private addConnectivityCuts(solution: Logic.Solution): number {
+        const whiteSet = new Set(solution.getTrueVars());
+        const { height, width } = this.puzzle.size;
+        let cuts = 0;
+        for (const white of [true, false]) {
+            const comps = this.colorComponents(whiteSet, white);
+            if (comps.length <= 1) continue;
+
+            let smallest = comps[0];
+            for (const comp of comps) if (comp.length < smallest.length) smallest = comp;
+
+            const inIsland = new Set(smallest.map(([r, c]) => r * width + c));
+            const boundary = new Set<number>();
+            for (const [r, c] of smallest) {
+                for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                    const nr = r + dr, nc = c + dc;
+                    if (nr < 0 || nc < 0 || nr >= height || nc >= width) continue;
+                    const idx = nr * width + nc;
+                    if (inIsland.has(idx)) continue;
+                    boundary.add(idx);
+                }
+            }
+            if (boundary.size === 0) continue; // island fills the board — impossible here
+
+            const literals: Logic.Term[] = [];
+            // Every island cell must stop being this colour …
+            for (const [r, c] of smallest) {
+                const v = this.getCellVar(r, c);
+                literals.push(white ? Logic.not(v) : v);
+            }
+            // … or a neighbour must share the colour (reconnecting the island).
+            for (const idx of boundary) {
+                const r = Math.floor(idx / width), c = idx % width;
+                const v = this.getCellVar(r, c);
+                literals.push(white ? v : Logic.not(v));
+            }
+            this.solver.require(Logic.or(...literals));
+            cuts++;
+        }
+        return cuts;
+    }
+
     /**
      * Solve (optionally under an assumption), rejecting any solution whose colours
-     * are not each a single connected group by forbidding that model and re-solving.
-     * This makes connectivity exact (the edge-count "tree" constraint alone is not
-     * sufficient — it can be satisfied by a cyclic component + a detached cell).
+     * are not each a single connected group. Disconnected models are excluded with
+     * a lazy connectivity cut (see `addConnectivityCuts`) rather than by forbidding
+     * the whole assignment, which converges far faster on large boards.
      *
-     * The refutation can need many iterations before it reaches a connected model,
-     * so callers that need exact answers can pass a larger `maxIterations`.
+     * Callers that need exact answers can pass a larger `maxIterations`.
      */
     private solveConnected(assumption?: Logic.Term, maxIterations = 500): Logic.Solution | null {
         for (let i = 0; i < maxIterations; i++) {
             const solution = assumption ? this.solver.solveAssuming(assumption) : this.solver.solve();
             if (!solution) return null;
             if (this.isConnectedSolution(solution)) return solution;
-            this.solver.forbid(this.assignmentTerm(solution));
+            // Lazy connectivity cut: prunes a whole family of disconnected models per
+            // step, so it converges far faster than forbidding one assignment at a time.
+            if (this.addConnectivityCuts(solution) === 0) {
+                this.solver.forbid(this.assignmentTerm(solution));
+            }
         }
         return null;
     }
