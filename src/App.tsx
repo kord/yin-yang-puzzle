@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import DesignMode from './DesignMode'
-import PlayMode from './PlayMode'
+import PlayMode from './play/PlayMode'
 import { decodePuzzle } from './puzzle/encode'
 import type { SharedPuzzle } from './puzzle/types'
 import './App.css'
