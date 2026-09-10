@@ -5,23 +5,19 @@ import { decodePuzzle } from './puzzle/encode'
 import type { SharedPuzzle } from './puzzle/types'
 import './App.css'
 
-/** Read a shared puzzle from the `?p=` query param, if any. */
-function parseShared(): SharedPuzzle | null {
-  const p = new URLSearchParams(window.location.search).get('p')
-  if (!p) return null
-  const givens = decodePuzzle(p)
-  if (!givens) return null
-  return { encoded: p, givens }
-}
-
-/** True when the app was opened in design mode (`?mode=design`). */
-function parseDesign(): boolean {
-  return new URLSearchParams(window.location.search).get('mode') === 'design'
+/** Read the URL query once: a shared puzzle (`?p=`) and whether design mode was requested (`?mode=design`). */
+function parseUrl(): { shared: SharedPuzzle | null; design: boolean } {
+  const params = new URLSearchParams(window.location.search)
+  const p = params.get('p')
+  const givens = p ? decodePuzzle(p) : null
+  return {
+    shared: p && givens ? { encoded: p, givens } : null,
+    design: params.get('mode') === 'design',
+  }
 }
 
 function App() {
-  const shared = useMemo(parseShared, [])
-  const design = useMemo(parseDesign, [])
+  const { shared, design } = useMemo(parseUrl, [])
 
   const reloadHome = () => {
     // Full page reload back to the bare path, clearing any query state.

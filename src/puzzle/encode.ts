@@ -21,11 +21,11 @@
  * so the output is safe in `?p=`.
  */
 
-export interface PuzzleEncodingInput {
-    size: { width: number; height: number }
-    fixedWhites: readonly boolean[][]
-    fixedBlacks: readonly boolean[][]
-}
+import type { YinYangPuzzlePartialDefinition } from './types'
+import { blank } from './grid'
+
+/** The puzzle shape this module encodes — the same fields as a partial definition. */
+export type PuzzleEncodingInput = YinYangPuzzlePartialDefinition
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_'
 
@@ -124,10 +124,6 @@ function unmaskBytes(seed: number[], masked: number[]): number[] {
 function encodeOne(raw: number[]): string {
     const { seed, masked } = maskBytes(raw)
     return toBase63([...seed, ...masked])
-}
-
-function blank(n: number): boolean[][] {
-    return Array.from({ length: n }, () => Array(n).fill(false))
 }
 
 // ---------------------------------------------------------------------------

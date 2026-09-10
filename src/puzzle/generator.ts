@@ -1,15 +1,12 @@
 import YYSolver from './YYSolver'
 import { mulberry32 } from './seed'
+import { blank } from './grid'
 import type {
     YinYangPuzzleDefinition,
     YinYangPuzzlePartialDefinition,
     YinYangPuzzleSolution,
     Size,
 } from './types'
-
-function blank(n: number): boolean[][] {
-    return Array.from({ length: n }, () => Array(n).fill(false))
-}
 
 function seedPartial(size: Size, cells: { row: number; col: number; white: boolean }[]): YinYangPuzzlePartialDefinition {
     const n = size.width

@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { PuzzleGrid, type ElementRef, type ElementState } from './PuzzleGrid'
 import type { Extension, YinYangPuzzlePartialDefinition } from './puzzle/types'
 import { encodePuzzle } from './puzzle/encode'
+import { range } from './puzzle/grid'
+import type { SolveResponse } from './puzzle/messages'
 import './App.css'
 
-const SIZES = Array.from({ length: 17 }, (_, i) => i + 4) // 4x4 .. 20x20
-
-type SolveResponse = { id: number; extensions: Extension }
+const SIZES = range(4, 20) // 4x4 .. 20x20
 
 type Marks = { whites: boolean[][]; blacks: boolean[][] }
 

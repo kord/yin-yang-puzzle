@@ -1,8 +1,5 @@
 import YYSolver from './YYSolver'
-import type { Extension, YinYangPuzzlePartialDefinition } from './types'
-
-type SolveRequest = { id: number; puzzle: YinYangPuzzlePartialDefinition }
-type SolveResponse = { id: number; extensions: Extension }
+import type { SolveRequest, SolveResponse } from './messages'
 
 const ctx = self as unknown as {
     onmessage: ((e: MessageEvent) => void) | null

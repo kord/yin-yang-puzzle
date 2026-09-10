@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { formatDate } from './puzzle/seed'
 
 interface MonthPickerProps {
     value: string
@@ -13,13 +14,6 @@ const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 function toDate(str: string): Date {
     const [y, m, d] = str.split('-').map(Number)
     return new Date(y, m - 1, d)
-}
-
-function fmt(date: Date): string {
-    const y = date.getFullYear()
-    const m = String(date.getMonth() + 1).padStart(2, '0')
-    const d = String(date.getDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
 }
 
 /**
@@ -81,7 +75,7 @@ export default function MonthPicker({ value, max, disabled, onSelect, isComplete
 
     const cells: (string | null)[] = []
     for (let i = 0; i < firstWeekday; i++) cells.push(null)
-    for (let d = 1; d <= daysInMonth; d++) cells.push(fmt(new Date(view.year, view.month, d)))
+    for (let d = 1; d <= daysInMonth; d++) cells.push(formatDate(new Date(view.year, view.month, d)))
 
     return (
         <div className="month-picker" ref={rootRef}>

@@ -22,8 +22,9 @@ const dayKey = (size: number, date: string): string => `${PUZZLENAME}.day.${size
 const solvedKey = (size: number): string => `${PUZZLENAME}.solved.${size}`
 const SCHEMA_VERSION = 2
 
-export function loadDay(storage: StorageLike, size: number, date: string): DayRecord | null {
-    const raw = storage.getItem(dayKey(size, date))
+const encodeRecord = (record: DayRecord): string => JSON.stringify({ ...record, version: SCHEMA_VERSION })
+
+function decodeRecord(raw: string | null): DayRecord | null {
     if (!raw) return null
     try {
         const parsed = JSON.parse(raw) as { version?: number } & DayRecord
@@ -36,8 +37,12 @@ export function loadDay(storage: StorageLike, size: number, date: string): DayRe
     }
 }
 
+export function loadDay(storage: StorageLike, size: number, date: string): DayRecord | null {
+    return decodeRecord(storage.getItem(dayKey(size, date)))
+}
+
 export function saveDay(storage: StorageLike, size: number, date: string, record: DayRecord): void {
-    storage.setItem(dayKey(size, date), JSON.stringify({ ...record, version: SCHEMA_VERSION }))
+    storage.setItem(dayKey(size, date), encodeRecord(record))
 
     if (record.solved) {
         const solved = getSolvedDates(storage, size)
@@ -68,19 +73,9 @@ export function emptyUserCells(n: number): UserCell[] {
 const sharedKey = (encoded: string): string => `${PUZZLENAME}.shared.${encoded}`
 
 export function loadShared(storage: StorageLike, encoded: string): DayRecord | null {
-    const raw = storage.getItem(sharedKey(encoded))
-    if (!raw) return null
-    try {
-        const parsed = JSON.parse(raw) as { version?: number } & DayRecord
-        if (parsed.version !== SCHEMA_VERSION) return null
-        const { version: _version, ...record } = parsed
-        if (!record || !Array.isArray(record.userCells)) return null
-        return record
-    } catch {
-        return null
-    }
+    return decodeRecord(storage.getItem(sharedKey(encoded)))
 }
 
 export function saveShared(storage: StorageLike, encoded: string, record: DayRecord): void {
-    storage.setItem(sharedKey(encoded), JSON.stringify({ ...record, version: SCHEMA_VERSION }))
+    storage.setItem(sharedKey(encoded), encodeRecord(record))
 }

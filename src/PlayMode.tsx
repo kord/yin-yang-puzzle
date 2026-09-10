@@ -2,18 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import { PuzzleGrid, type ElementRef } from './PuzzleGrid'
 import type { SharedPuzzle, UserCell, YinYangPuzzleDefinition } from './puzzle/types'
 import { dailyDate, seedFromDateString } from './puzzle/seed'
-import { loadDay, saveDay, loadShared, saveShared, getSolvedDates, emptyUserCells } from './storage'
+import { range } from './puzzle/grid'
+import { hasMonochrome2x2, isColorConnected } from './puzzle/rules'
+import type { GenResponse } from './puzzle/messages'
+import { loadDay, saveDay, loadShared, saveShared, getSolvedDates, emptyUserCells, type DayRecord } from './storage'
 import Confetti from './Confetti'
 import MonthPicker from './MonthPicker'
 import HintModal from './HintModal'
 import './App.css'
 
-const SIZES = Array.from({ length: 9 }, (_, i) => i + 4) // 4x4 .. 12x12
+const SIZES = range(4, 12) // 4x4 .. 12x12
 
 // Only show the debug Status panel during development; hide it in production.
 const SHOW_STATUS_BAR = import.meta.env.DEV
-
-type GenResponse = { id: number; puzzle: YinYangPuzzleDefinition; date?: string; prefetch?: boolean }
 
 const DEFAULT_SIZE = 6
 function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
@@ -78,11 +79,7 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
             setStatus('')
             const n = pz.size.width
             userCellsRef.current = emptyUserCells(n * n)
-            saveDay(localStorage, n, dateRef.current, {
-                puzzle: pz,
-                userCells: userCellsRef.current,
-                solved: false,
-            })
+            persist({ puzzle: pz, userCells: userCellsRef.current, solved: false })
         }
         return () => {
             worker.terminate()
@@ -206,18 +203,10 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
                 clearTimeout(saveTimerRef.current)
                 saveTimerRef.current = null
             }
-            const pz = puzzleRef.current
-            if (pz) {
-                const record = {
-                    puzzle: pz,
-                    userCells: userCellsRef.current,
-                    solved: solvedRef.current,
-                    solvedAt: solvedRef.current ? Date.now() : undefined,
-                }
-                if (sharedRef.current) saveShared(localStorage, encodedRef.current, record)
-                else saveDay(localStorage, sizeRef.current, dateRef.current, record)
-            }
+            const record = currentRecord()
+            if (record) persist(record)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     function generateDaily(d: string) {
@@ -340,17 +329,27 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
         return cells
     }
 
-    function saveProgress() {
+    /** The board currently on screen, as a persistable record. */
+    function currentRecord(): DayRecord | null {
         const pz = puzzleRef.current
-        if (!pz) return
-        const record = {
+        if (!pz) return null
+        return {
             puzzle: pz,
             userCells: userCellsRef.current,
             solved: solvedRef.current,
             solvedAt: solvedRef.current ? Date.now() : undefined,
         }
+    }
+
+    /** Save to the daily or shared store, whichever this board belongs to. */
+    function persist(record: DayRecord) {
         if (sharedRef.current) saveShared(localStorage, encodedRef.current, record)
-        else saveDay(localStorage, sizeRef.current, dateRef.current, record)
+        else saveDay(localStorage, record.puzzle.size.width, dateRef.current, record)
+    }
+
+    function saveProgress() {
+        const record = currentRecord()
+        if (record) persist(record)
     }
 
     function scheduleSave() {
@@ -598,55 +597,6 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
             {showHint && <HintModal onClose={() => setShowHint(false)} />}
         </div>
     )
-}
-
-/** True if any 2×2 block is a single colour (a Yin-Yang violation). */
-function hasMonochrome2x2(isWhite: boolean[][]): boolean {
-    const n = isWhite.length
-    for (let r = 0; r < n - 1; r++) {
-        for (let c = 0; c < n - 1; c++) {
-            const a = isWhite[r][c]
-            if (isWhite[r][c + 1] === a && isWhite[r + 1][c] === a && isWhite[r + 1][c + 1] === a) {
-                return true
-            }
-        }
-    }
-    return false
-}
-
-/** True if all cells of one colour (white when `white`, else black) form a single connected group. */
-function isColorConnected(isWhite: boolean[][], white: boolean): boolean {
-    const n = isWhite.length
-    const visited = Array.from({ length: n }, () => Array(n).fill(false))
-
-    let start: [number, number] | null = null
-    for (let r = 0; r < n && !start; r++) {
-        for (let c = 0; c < n; c++) {
-            if (isWhite[r][c] === white) {
-                start = [r, c]
-                break
-            }
-        }
-    }
-    if (!start) return true
-
-    const stack: [number, number][] = [start]
-    let reached = 0
-    while (stack.length) {
-        const [r, c] = stack.pop()!
-        if (r < 0 || c < 0 || r >= n || c >= n || visited[r][c] || isWhite[r][c] !== white) continue
-        visited[r][c] = true
-        reached++
-        stack.push([r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1])
-    }
-
-    let total = 0
-    for (let r = 0; r < n; r++) {
-        for (let c = 0; c < n; c++) {
-            if (isWhite[r][c] === white) total++
-        }
-    }
-    return reached === total
 }
 
 export default PlayMode

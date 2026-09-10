@@ -1,5 +1,6 @@
 import Logic from "logic-solver";
 import type { Extension, GridPossibility, Location, YinYangPuzzlePartialDefinition, YinYangPuzzleSolution } from "./types";
+import { connectedComponents, isColorConnected } from "./rules";
 
 // `extensions()` (used by the design tool to show implications) needs exact
 // answers, so it gives the connectivity refutation a much larger budget than
@@ -203,47 +204,21 @@ class YYSolver {
         return this.logicSolutionToYinYangSolution(solution);
     }
 
-    /**
-     * True if every white cell and every black cell forms a single 4-connected group.
-     */
-    private isConnectedSolution(solution: Logic.Solution): boolean {
+    /** The model as a plain grid (true = white). */
+    private solutionToGrid(solution: Logic.Solution): boolean[][] {
         const { height, width } = this.puzzle.size;
-        const cellWhites = new Set(solution.getTrueVars());
-        const visited = new Set<string>();
-        const flood = (white: boolean, sr: number, sc: number) => {
-            const stack = [[sr, sc]];
-            while (stack.length) {
-                const [r, c] = stack.pop()!;
-                const key = `${r},${c}`;
-                if (visited.has(key)) continue;
-                visited.add(key);
-                for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                    const nr = r + dr, nc = c + dc;
-                    if (nr < 0 || nc < 0 || nr >= height || nc >= width) continue;
-                    if (cellWhites.has(this.getCellVar(nr, nc)) === white) stack.push([nr, nc]);
-                }
-            }
-        };
-
-        const whites: [number, number][] = [];
-        const blacks: [number, number][] = [];
+        const whites = new Set(solution.getTrueVars());
+        const grid = Array.from({ length: height }, () => Array(width).fill(false));
         for (let r = 0; r < height; r++) {
-            for (let c = 0; c < width; c++) {
-                if (cellWhites.has(this.getCellVar(r, c))) whites.push([r, c]);
-                else blacks.push([r, c]);
-            }
+            for (let c = 0; c < width; c++) grid[r][c] = whites.has(this.getCellVar(r, c));
         }
+        return grid;
+    }
 
-        if (whites.length) {
-            flood(true, whites[0][0], whites[0][1]);
-            if (!whites.every(([r, c]) => visited.has(`${r},${c}`))) return false;
-            visited.clear();
-        }
-        if (blacks.length) {
-            flood(false, blacks[0][0], blacks[0][1]);
-            if (!blacks.every(([r, c]) => visited.has(`${r},${c}`))) return false;
-        }
-        return true;
+    /** True if every white cell and every black cell forms a single 4-connected group. */
+    private isConnectedSolution(solution: Logic.Solution): boolean {
+        const grid = this.solutionToGrid(solution);
+        return isColorConnected(grid, true) && isColorConnected(grid, false);
     }
 
     /** The exact assignment as a conjunction of cell literals. */
@@ -257,38 +232,6 @@ class YYSolver {
             }
         }
         return Logic.and(...literals);
-    }
-
-    /** Connected components of one colour (4-connectivity). */
-    private colorComponents(whiteSet: Set<string>, white: boolean): [number, number][][] {
-        const { height, width } = this.puzzle.size;
-        const visited = new Set<string>();
-        const comps: [number, number][][] = [];
-        for (let r = 0; r < height; r++) {
-            for (let c = 0; c < width; c++) {
-                if (whiteSet.has(this.getCellVar(r, c)) !== white) continue;
-                const key = `${r},${c}`;
-                if (visited.has(key)) continue;
-                const comp: [number, number][] = [];
-                const stack: [number, number][] = [[r, c]];
-                visited.add(key);
-                while (stack.length) {
-                    const [cr, cc] = stack.pop()!;
-                    comp.push([cr, cc]);
-                    for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                        const nr = cr + dr, nc = cc + dc;
-                        if (nr < 0 || nc < 0 || nr >= height || nc >= width) continue;
-                        if (whiteSet.has(this.getCellVar(nr, nc)) !== white) continue;
-                        const nkey = `${nr},${nc}`;
-                        if (visited.has(nkey)) continue;
-                        visited.add(nkey);
-                        stack.push([nr, nc]);
-                    }
-                }
-                comps.push(comp);
-            }
-        }
-        return comps;
     }
 
     /**
@@ -305,11 +248,11 @@ class YYSolver {
      * Returns the number of cuts added.
      */
     private addConnectivityCuts(solution: Logic.Solution): number {
-        const whiteSet = new Set(solution.getTrueVars());
+        const grid = this.solutionToGrid(solution);
         const { height, width } = this.puzzle.size;
         let cuts = 0;
         for (const white of [true, false]) {
-            const comps = this.colorComponents(whiteSet, white);
+            const comps = connectedComponents(grid, white);
             if (comps.length <= 1) continue;
 
             let smallest = comps[0];
