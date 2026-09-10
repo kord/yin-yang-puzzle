@@ -33,5 +33,5 @@ See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rule
 
 # Some interesting puzzles
 
-[9x9](http://localhost:5173/?p=m60p9GKhHsjhwDpapRD9idVbbAWZGN_)
+[9x9](https://yinyang.therestinmotion.com/?p=m60p9GKhHsjhwDpapRD9idVbbAWZGN_)
 []()
