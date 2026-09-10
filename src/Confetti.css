@@ -1,0 +1,8 @@
+/* Full-viewport canvas for the completion confetti burst. */
+.confetti {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-confetti);
+    display: block;
+    pointer-events: none;
+}

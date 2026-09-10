@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { formatDate } from './puzzle/seed'
+import './MonthPicker.css'
 
 interface MonthPickerProps {
     value: string

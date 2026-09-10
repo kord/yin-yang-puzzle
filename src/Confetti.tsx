@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react'
+import './Confetti.css'
 
 const COLORS = ['#f43f5e', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899']
+
+const prefersReducedMotion = () =>
+    typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 /** A lightweight canvas confetti burst. Active for the lifetime of `active`. */
 export default function Confetti({ active }: { active: boolean }) {
@@ -8,6 +12,7 @@ export default function Confetti({ active }: { active: boolean }) {
 
     useEffect(() => {
         if (!active) return
+        if (prefersReducedMotion()) return // no burst for reduced-motion users
         const canvas = canvasRef.current
         if (!canvas) return
         const ctx = canvas.getContext('2d')

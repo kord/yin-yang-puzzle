@@ -1,23 +1,31 @@
 .app {
   padding: 24px;
-  /* max-width: 980px; */
   margin: 0 auto;
+}
+
+/* Heading kept for the document outline; the button inside is the control. */
+.app__title-heading {
+  margin: 0;
+  font: inherit;
 }
 
 .app__title {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-family: Georgia, 'Times New Roman', serif;
+  margin: 4px 0 16px;
+  padding: 0;
+  border: 0;
+  font-family: var(--font-serif);
   font-size: 42px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  margin: 4px 0 16px;
-  background: linear-gradient(120deg, #f7e3b0 0%, #e6b45f 45%, #ffffff 90%);
+  text-align: left;
+  background: var(--title-gradient);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.55));
+  filter: var(--title-shadow);
   cursor: pointer;
   user-select: none;
 }
@@ -25,7 +33,7 @@
 .app__title-icon {
   display: inline-flex;
   flex: 0 0 auto;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
   animation: app-spin 40s linear infinite;
 }
 
@@ -49,7 +57,6 @@
 }
 
 .app__panel {
-  font-family: var(--sans, system-ui, 'Segoe UI', Roboto, sans-serif);
   font-size: 14px;
   line-height: 1.5;
   max-width: 260px;
@@ -61,7 +68,7 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 20px 0 8px;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .app__text {
@@ -71,7 +78,7 @@
 .app__hint {
   font: inherit;
   font-size: 13px;
-  color: #e6c07a;
+  color: var(--accent);
   background: none;
   border: none;
   padding: 2px 0;
@@ -82,34 +89,36 @@
 }
 
 .app__hint:hover {
-  color: #f5d9a0;
+  color: var(--accent-hover);
 }
 
 .app__controls {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--gutter);
   margin-bottom: 12px;
 }
 
-.app__undo {
+/* Shared chrome for the Undo / Reset / Share buttons. */
+.app__button {
   font: inherit;
   font-size: 14px;
   padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #bbb;
-  background: #3b3131;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
   cursor: pointer;
 }
 
-.app__undo:disabled {
-  opacity: 0.5;
-  cursor: default;
+.app__button:hover:not(:disabled) {
+  background: var(--surface-raised-hover);
 }
 
-.app__undo:not(:disabled):hover {
-  background: #f0f0f0;
+.app__button:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .app__share {
@@ -121,7 +130,7 @@
 
 .app__copied {
   font-size: 13px;
-  color: #2f9e44;
+  color: var(--ok);
 }
 
 .app__sizelabel {
@@ -137,56 +146,32 @@
   gap: 6px;
   font-size: 13px;
   cursor: pointer;
-  color: #dcdcdc;
+  color: var(--text-muted);
 }
 
 .app__toggle input {
-  accent-color: #e6c07a;
+  accent-color: var(--accent);
 }
 
 .app__size {
   font: inherit;
   font-size: 14px;
   padding: 5px 8px;
-  border-radius: 6px;
-  border: 1px solid #bbb;
-  background: #6b6868;
-}
-
-.app__code {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 12px;
-  background: #6e6666;
-  padding: 1px 4px;
-  border-radius: 4px;
-}
-
-.app__key {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 12px;
-  border: 1px solid #ccc;
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  padding: 0 4px;
-  background: #5f5858;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
 }
 
 .app__status {
-  font-family: ui-monospace, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
-  color: #333;
-  background: #fafafa;
-  border: 1px solid #eee;
+  color: var(--status-fg);
+  background: var(--status-bg);
+  border: 1px solid var(--status-border);
   border-radius: 4px;
   padding: 6px 8px;
   min-height: 18px;
-}
-
-.confetti {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9999;
 }
 
 .app__datecontrol {
@@ -197,7 +182,7 @@
   display: block;
   font-weight: 600;
   margin-bottom: 4px;
-  color: #ccc;
+  color: var(--text-muted);
 }
 
 .app__sizes {
@@ -211,15 +196,15 @@
   font: inherit;
   font-size: 13px;
   padding: 6px 4px;
-  border-radius: 6px;
-  border: 1px solid #bbb;
-  background: #3b3131;
-  color: #fff;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
   cursor: pointer;
 }
 
-.app__sizebtn:hover {
-  background: #584949;
+.app__sizebtn:hover:not(:disabled) {
+  background: var(--surface-raised-hover);
 }
 
 .app__sizebtn:disabled {
@@ -227,150 +212,47 @@
   cursor: default;
 }
 
-/* .app__sizebtn:not(:disabled):hover {
-  background: #534f4f;
-} */
-
 .app__sizebtn--active {
-  border-color: #fff;
+  border-color: var(--border-strong);
   font-weight: 600;
-  background: #6e6767;
+  background: var(--surface-selected);
 }
 
 .app__sizebtn--completed {
-  background: #b9e4b9;
-  border-color: #8bc78b;
-  color: #14532d;
+  background: var(--success-bg);
+  border-color: var(--success-border);
+  color: var(--success-fg);
 }
 
-.app__sizebtn--completed:hover {
-  background: #7cd17c;
+.app__sizebtn--completed:hover:not(:disabled) {
+  background: var(--success-bg-hover);
 }
 
+/* Global busy cursor while a puzzle generates. The `!important` is needed to
+   beat the `:hover:not(:disabled)` rules above. */
 body.cursor-busy,
 body.cursor-busy * {
   cursor: progress !important;
 }
 
-.month-picker {
-  position: relative;
-  user-select: none;
-  padding-bottom: 6px;
+@media (max-width: 640px) {
+  .app {
+    padding: 16px;
+  }
+
+  .app__title {
+    font-size: 30px;
+    gap: 8px;
+  }
+
+  .app__title-icon svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  .app__layout {
+    gap: 20px;
+  }
 }
 
-.month-picker__trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font: inherit;
-  font-size: 13px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  border: 1px solid #bbb;
-  background: #3b3131;
-  color: #fff;
-  cursor: pointer;
-}
-
-.month-picker__trigger:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.month-picker__value {
-  font-variant-numeric: tabular-nums;
-}
-
-.month-picker__dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 20;
-  width: 214px;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #444;
-  background: #2b1f1f;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-
-.month-picker__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.month-picker__nav {
-  font: inherit;
-  font-size: 16px;
-  line-height: 1;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid #bbb;
-  background: #3b3131;
-  color: #fff;
-  cursor: pointer;
-}
-
-.month-picker__nav:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.month-picker__label {
-  font-weight: 600;
-}
-
-.month-picker__grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-}
-
-.month-picker__weekday {
-  text-align: center;
-  font-size: 11px;
-  color: #888;
-}
-
-.month-picker__cell {
-  font: inherit;
-  font-size: 13px;
-  padding: 4px 0;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: #fff;
-  cursor: pointer;
-}
-
-.month-picker__cell:hover:not(:disabled) {
-  background: #3b3131;
-}
-
-.month-picker__cell:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.month-picker__cell--empty {
-  pointer-events: none;
-}
-
-.month-picker__cell--today {
-  border-color: #bbb;
-}
-
-.month-picker__cell--selected {
-  background: #534f4f;
-  border-color: #fff;
-  font-weight: 600;
-}
-
-.month-picker__cell--completed {
-  background: #b9e4b9;
-  color: #14532d;
-}
+/* Month-picker and confetti styles live in MonthPicker.css / Confetti.css. */

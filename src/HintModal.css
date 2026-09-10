@@ -8,23 +8,22 @@
 .hint-modal {
     position: fixed;
     inset: 0;
-    z-index: 10000;
+    z-index: var(--z-modal);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(0, 0, 0, 0.55);
+    background: var(--overlay);
     animation: hint-modal-fade 0.15s ease;
 }
 
 .hint-modal__dialog {
-    font-family: var(--sans, system-ui, 'Segoe UI', Roboto, sans-serif);
-    background: #f4efe6;
-    color: #222;
-    border: 1px solid #b9a679;
-    border-radius: 10px;
+    background: var(--paper);
+    color: var(--paper-ink);
+    border: 1px solid var(--paper-border);
+    border-radius: var(--radius-lg);
     box-shadow:
-        0 8px 30px rgba(0, 0, 0, 0.35),
+        var(--shadow-modal),
         inset 0 1px 0 rgba(255, 255, 255, 0.6);
     max-width: 420px;
     width: 100%;
@@ -45,7 +44,7 @@
     margin: 0;
     font-size: 18px;
     font-weight: 700;
-    color: #4a3a1e;
+    color: var(--paper-title);
 }
 
 .hint-modal__close {
@@ -55,9 +54,9 @@
     width: 34px;
     height: 34px;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius);
     background: transparent;
-    color: #6b5a36;
+    color: var(--paper-close);
     cursor: pointer;
 }
 
@@ -77,14 +76,14 @@
     margin: 0 0 4px;
     font-size: 15px;
     font-weight: 700;
-    color: #4a3a1e;
+    color: var(--paper-title);
 }
 
 .hint-modal__rule-body {
     margin: 0;
     font-size: 14px;
     line-height: 1.5;
-    color: #333;
+    color: var(--paper-ink);
 }
 
 @keyframes hint-modal-fade {

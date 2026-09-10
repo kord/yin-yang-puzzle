@@ -86,13 +86,13 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
                 <div className="app__controls">
                     <button
                         type="button"
-                        className="app__undo"
+                        className="app__button"
                         onClick={board.undo}
                         disabled={generating || !board.canUndo}
                     >
                         Undo (Z)
                     </button>
-                    <button type="button" className="app__undo" onClick={board.reset} disabled={generating}>
+                    <button type="button" className="app__button" onClick={board.reset} disabled={generating}>
                         Reset (R)
                     </button>
                 </div>

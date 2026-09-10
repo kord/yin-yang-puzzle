@@ -311,7 +311,7 @@ function DesignMode() {
                 <div className="app__controls">
                     <button
                         type="button"
-                        className="app__undo"
+                        className="app__button"
                         onClick={undo}
                         disabled={historyLen === 0}
                     >
@@ -319,7 +319,7 @@ function DesignMode() {
                     </button>
                     <button
                         type="button"
-                        className="app__undo"
+                        className="app__button"
                         onClick={reset}
                         disabled={!hasMarks}
                     >
@@ -352,7 +352,7 @@ function DesignMode() {
                 <div className="app__share">
                     <button
                         type="button"
-                        className="app__undo"
+                        className="app__button"
                         onClick={copyShareLink}
                         disabled={!unique}
                     >
