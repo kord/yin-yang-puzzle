@@ -30,3 +30,8 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+# Some interesting puzzles
+
+[9x9](http://localhost:5173/?p=m60p9GKhHsjhwDpapRD9idVbbAWZGN_)
+[]()
