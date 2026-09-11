@@ -163,7 +163,7 @@ function allColourings(m, n, budgetMs) {
     const cycleIsBoundaryRing = (color) => {
         const alive = new Uint8Array(m * n)
         for (let i = 0; i < m * n; i++) if (g[i] === color) alive[i] = 1
-        for (;;) {
+        for (; ;) {
             const doomed = []
             for (let r = 0; r < m; r++) {
                 for (let c = 0; c < n; c++) {
