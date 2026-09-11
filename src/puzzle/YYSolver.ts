@@ -72,12 +72,27 @@ class YYSolver {
     }
 
     /**
-     * Enforces that each colour forms a single connected group ("treelike").
+     * Enforces that each colour forms a single connected group.
      *
-     * A valid yin-yang colouring is connected and acyclic (no holes), so each
-     * colour's adjacency graph is a tree: a tree on n cells has exactly n-1
-     * same-colour adjacencies. Requiring `n - sameColourEdges = 1` per colour
-     * forces a single connected, acyclic component — i.e. connectivity.
+     * A valid yin-yang colouring is connected, and each colour's adjacency graph is
+     * a tree — a tree on n cells has exactly n-1 same-colour adjacencies — with one
+     * exception: a colour class may instead contain the boundary ring, which is a
+     * cycle, and then it has exactly one independent cycle, so n = e rather than
+     * n = e + 1.
+     *
+     * The exception is not hypothetical, and requiring n = e + 1 unconditionally
+     * made whole boards unsolvable. The interface between the two colours is always
+     * a Hamiltonian path or cycle over the interior lattice points (Demaine, Lynch,
+     * Rudoy, Uno, "Yin-Yang Puzzles are NP-complete", CCCG 2021, Lemma 2.1); a
+     * *cycle* means one colour surrounds the other, and that is exactly when the
+     * class holding the boundary ring fails the tree count. An interior lattice of
+     * p x q admits such a cycle only when p, q >= 2 and p*q is even, so the
+     * exception only arises on the odd squares (5x5, 7x7, 9x9, 11x11) and not on
+     * 4x4, 6x6, 8x8 or 10x10. See the README's annotated literature, and scratch/.
+     *
+     * This is a necessary condition, not a sufficient one: it still permits
+     * `components - cycles = 1`, e.g. a cyclic region plus a detached cell. Models
+     * like that are refuted lazily by the cuts in `solveConnected`.
      */
     private addConnectivityConstraints() {
         const { height, width } = this.puzzle.size;
@@ -116,10 +131,63 @@ class YYSolver {
         const eWhite = Logic.sum(...whiteEdges);
         const eBlack = Logic.sum(...blackEdges);
 
-        // White is a tree: nWhite - eWhite = 1  =>  nWhite = eWhite + 1.
-        this.solver.require(Logic.equalBits(nWhite, Logic.sum(eWhite, Logic.constantBits(1))));
-        // Black is a tree: nBlack - eBlack = 1.
-        this.solver.require(Logic.equalBits(nBlack, Logic.sum(eBlack, Logic.constantBits(1))));
+        // The usual case: both classes are trees, i.e. n - e = 1 for each.
+        const whiteIsTree = Logic.equalBits(nWhite, Logic.sum(eWhite, Logic.constantBits(1)));
+        const blackIsTree = Logic.equalBits(nBlack, Logic.sum(eBlack, Logic.constantBits(1)));
+
+        // Whether the boundary-ring exception can occur at all: it needs a
+        // Hamiltonian cycle on the (height-1) x (width-1) interior lattice.
+        const p = height - 1;
+        const q = width - 1;
+        const ringPossible = p >= 2 && q >= 2 && (p * q) % 2 === 0;
+
+        if (!ringPossible) {
+            // Two separate requirements, in this order. That is exactly what the
+            // solver has always been handed on these boards, and MiniSat's search
+            // order decides which valid solution comes back first — so bundling
+            // them into one conjunction would silently change the generated daily
+            // puzzles for no semantic gain.
+            this.solver.require(whiteIsTree);
+            this.solver.require(blackIsTree);
+            return;
+        }
+
+        const bothTrees = Logic.and(whiteIsTree, blackIsTree);
+
+        // The exception: every boundary cell has one colour, so that class holds
+        // the ring and carries exactly one independent cycle (n = e), while the
+        // other class is still a tree.
+        const perimeter = this.perimeterCells();
+        const allBoundaryWhite = Logic.and(
+            ...perimeter.map(({ row, col }) => this.getCellVar(row, col)),
+        );
+        const allBoundaryBlack = Logic.and(
+            ...perimeter.map(({ row, col }) => Logic.not(this.getCellVar(row, col))),
+        );
+
+        const whiteHoldsRing = Logic.and(
+            allBoundaryWhite,
+            Logic.equalBits(nWhite, eWhite),
+            blackIsTree,
+        );
+        const blackHoldsRing = Logic.and(
+            allBoundaryBlack,
+            Logic.equalBits(nBlack, eBlack),
+            whiteIsTree,
+        );
+
+        this.solver.require(Logic.or(bothTrees, whiteHoldsRing, blackHoldsRing));
+    }
+
+    /** The border cells in clockwise order, each visited exactly once. */
+    private perimeterCells(): Location[] {
+        const { height, width } = this.puzzle.size;
+        const perimeter: Location[] = [];
+        for (let c = 0; c < width; c++) perimeter.push({ row: 0, col: c });
+        for (let r = 1; r < height; r++) perimeter.push({ row: r, col: width - 1 });
+        for (let c = width - 2; c >= 0; c--) perimeter.push({ row: height - 1, col: c });
+        for (let r = height - 2; r >= 1; r--) perimeter.push({ row: r, col: 0 });
+        return perimeter;
     }
 
     private addCuttingConstraints() {
@@ -134,15 +202,8 @@ class YYSolver {
      * colour covers the whole border, exactly 2 if both colours touch it).
      */
     private addBorderConstraint() {
-        const { height, width } = this.puzzle.size;
-
         // Perimeter cells in clockwise order (visits each border cell once).
-        const perimeter: Location[] = [];
-        for (let c = 0; c < width; c++) perimeter.push({ row: 0, col: c });
-        for (let r = 1; r < height; r++) perimeter.push({ row: r, col: width - 1 });
-        for (let c = width - 2; c >= 0; c--) perimeter.push({ row: height - 1, col: c });
-        for (let r = height - 2; r >= 1; r--) perimeter.push({ row: r, col: 0 });
-
+        const perimeter = this.perimeterCells();
         const count = perimeter.length;
         const transitions: Logic.Term[] = [];
         for (let i = 0; i < count; i++) {
