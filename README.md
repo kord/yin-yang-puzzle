@@ -163,7 +163,8 @@ therefore *which* valid solution is found first — doing so silently regenerate
 12×12 daily puzzles. Keeping the clause shape leaves the even-sized boards byte-for-byte unchanged,
 which `dailyPuzzle.test.ts` verifies.
 
-Regression coverage is in `scratch/wrap-check.test.ts`: `anySolution()` and `uniqueSolution()` must
+Regression coverage lives in `src/puzzle/YYSolver.test.ts` under "the boundary-ring case":
+`anySolution()` and `uniqueSolution()` must
 both recover the wrap completion, and a 4×4 blank board must still solve through the tree branch.
 
 The border rule is a different story: the maximum number of colour transitions around the
@@ -178,19 +179,27 @@ on the border of the interior grid (or a cycle), take its edges as the interface
 
 ```
 grid      open path: built / valid     cycle: built / valid     inconsistent
-4x4        69 / 69                         0 / 0                         0
+4x4        200 / 200                       0 / 0                         0
 5x5        200 / 200                       200 / 200                     0
-6x6        41 / 41                         0 / 0                         0
-8x8        21 / 21                         0 / 0                         0
-10x10      7 / 7                           0 / 0                         0
+6x6        200 / 200                       0 / 0                         0
+8x8        184 / 184                       0 / 0                         0
+10x10      135 / 135                       0 / 0                         0
 ```
 
 Every sampled interface produced a valid Yin-Yang — 100% at every size, and zero inconsistent
 colourings — which is a strong check on the characterisation. The cycle row failing on even sizes
 is the same parity statement as above, arrived at from the other direction.
 
+The yield drops off, though, and not because the construction is wrong: those "built" counts are
+lower bounds on how often a *usable* interface comes out of one randomised DFS. An open interface
+needs both ends of the path on the border of the interior grid, and a Warnsdorff-ordered path's far
+end is rarely there — `scratch/sample-timing.mjs` measures the no-interface rate climbing from 0/20
+at 6x6 to 20/20 at 18x18 and above, while one path build stays cheap (4-20 ms, roughly linear). So
+"sample, then filter on the endpoints" is the wrong shape at size; the fix is to pin the endpoints,
+or to shuffle an existing Hamiltonian path with rotation moves.
+
 The current `randomSolution` is a rejection sampler: draw a random seed, ask the solver for a board,
-repeat until the board is valid. Direct construction replaces that with one pass, makes validity
+repeat until the board is valid. Direct construction replaces that with a single build, makes validity
 structural rather than something to be tested, and allows the *shape* of the puzzle to be chosen
 rather than hoped for — a meandering interface for a harder puzzle, a simple one for an easier one.
 

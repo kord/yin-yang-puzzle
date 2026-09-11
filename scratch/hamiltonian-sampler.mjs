@@ -25,7 +25,7 @@ const SAMPLES = 400
 const SEARCH_BUDGET = 200000
 
 /** Deterministic RNG, so the output is reproducible. */
-function mulberry32(seed) {
+export function mulberry32(seed) {
     let a = seed >>> 0
     return () => {
         a = (a + 0x6D2B79F5) >>> 0
@@ -37,7 +37,7 @@ function mulberry32(seed) {
 }
 
 /** A Hamiltonian path on the interior lattice grid (R x C points, R=m-1, C=n-1). */
-function hamiltonianPathOnInterior(m, n, rng) {
+export function hamiltonianPathOnInterior(m, n, rng) {
     const R = m - 1
     const C = n - 1
     const N = R * C
@@ -95,7 +95,7 @@ function hamiltonianPathOnInterior(m, n, rng) {
 const cellPairKey = (a, b) => (a < b ? a + ':' + b : b + ':' + a)
 
 /** The two cells separated by a lattice edge, as cell indices. */
-function cellsSplitByLatticeEdge(m, n, i1, j1, i2, j2) {
+export function cellsSplitByLatticeEdge(m, n, i1, j1, i2, j2) {
     if (j1 === j2) {
         const i = Math.min(i1, i2)
         return [i * n + (j1 - 1), i * n + j1]
@@ -105,7 +105,7 @@ function cellsSplitByLatticeEdge(m, n, i1, j1, i2, j2) {
 }
 
 /** Crack set for an interface: interior edges plus either 2 boundary stubs or a closing edge. */
-function cracksForInterface(m, n, spec, mode, rng) {
+export function cracksForInterface(m, n, spec, mode, rng) {
     const { path, C } = spec
     const cracks = new Set()
     const lat = (p) => [((p / C) | 0) + 1, (p % C) + 1]
@@ -142,7 +142,7 @@ function cracksForInterface(m, n, spec, mode, rng) {
 }
 
 /** Colour the cells by BFS across the cracks: equal within a region, opposite across one. */
-function colourFromCracks(m, n, cracks) {
+export function colourFromCracks(m, n, cracks) {
     const colour = new Int8Array(m * n).fill(-1)
     colour[0] = 0
     const stack = [0]
@@ -175,10 +175,13 @@ function colourFromCracks(m, n, cracks) {
  * its two ends to be lattice-adjacent (otherwise the closing edge is not a real
  * crack and the colouring comes out inconsistent).
  */
-function sampleInterface(m, n, rng, mode, tries) {
+export function sampleInterface(m, n, rng, mode, tries) {
     for (let t = 0; t < tries; t++) {
         const spec = hamiltonianPathOnInterior(m, n, rng)
-        if (!spec) return null
+        // A failed build is a dead end for this attempt only: retry. Bailing out
+        // here made sampling collapse to near-zero success on boards larger than
+        // 10x10, where a single randomised DFS fails perhaps half the time.
+        if (!spec) continue
         const { path, onBorder, C } = spec
         const first = path[0]
         const last = path[path.length - 1]
@@ -200,7 +203,7 @@ function sampleInterface(m, n, rng, mode, tries) {
 // checks
 // ---------------------------------------------------------------------------
 
-function isValid(colour, m, n) {
+export function isValid(colour, m, n) {
     for (let r = 0; r + 1 < m; r++) {
         for (let c = 0; c + 1 < n; c++) {
             const a = colour[r * n + c], b = colour[r * n + c + 1]
@@ -229,10 +232,14 @@ function isValid(colour, m, n) {
     return connected(0) && connected(1)
 }
 
-const rowsOf = (colour, m, n) => Array.from({ length: m }, (_, r) =>
+export const rowsOf = (colour, m, n) => Array.from({ length: m }, (_, r) =>
     Array.from({ length: n }, (_, c) => (colour[r * n + c] ? 'W' : 'B')).join(''))
 
 // ---------------------------------------------------------------------------
+// Demo table. Runs only when this file is executed directly, so the functions
+// above can be imported by other scratch scripts and by the generator.
+
+if (process.argv[1] && process.argv[1].endsWith('hamiltonian-sampler.mjs')) {
 
 const rng = mulberry32(20260912)
 const sizes = [[4, 4], [5, 5], [6, 6], [8, 8], [10, 10]]
@@ -268,10 +275,12 @@ for (const [m, n] of sizes) {
         for (const mode of ['open', 'cycle']) {
             if (!stats[mode].example) continue
             const label = mode === 'open'
-                ? 'open path - both classes are trees, solver can represent it'
-                : 'cycle - wrap case, solver cannot see it'
+                ? 'open path - both classes are trees'
+                : 'cycle - wrap case (solver handles it since the ring fix)'
             console.log(`   ${m}x${n} ${label}:`)
             for (const row of stats[mode].example) console.log('     ' + row)
         }
     }
+}
+
 }
