@@ -241,46 +241,46 @@ export const rowsOf = (colour, m, n) => Array.from({ length: m }, (_, r) =>
 
 if (process.argv[1] && process.argv[1].endsWith('hamiltonian-sampler.mjs')) {
 
-const rng = mulberry32(20260912)
-const sizes = [[4, 4], [5, 5], [6, 6], [8, 8], [10, 10]]
+    const rng = mulberry32(20260912)
+    const sizes = [[4, 4], [5, 5], [6, 6], [8, 8], [10, 10]]
 
-console.log('grid      open path: built / valid     cycle: built / valid     inconsistent')
-for (const [m, n] of sizes) {
-    const stats = {
-        open: { built: 0, valid: 0, example: null },
-        cycle: { built: 0, valid: 0, example: null },
-        inconsistent: 0,
-    }
+    console.log('grid      open path: built / valid     cycle: built / valid     inconsistent')
+    for (const [m, n] of sizes) {
+        const stats = {
+            open: { built: 0, valid: 0, example: null },
+            cycle: { built: 0, valid: 0, example: null },
+            inconsistent: 0,
+        }
 
-    for (let s = 0; s < SAMPLES; s++) {
-        const mode = s % 2 === 0 ? 'open' : 'cycle'
-        const cracks = sampleInterface(m, n, rng, mode, 40)
-        if (!cracks) continue
-        stats[mode].built++
+        for (let s = 0; s < SAMPLES; s++) {
+            const mode = s % 2 === 0 ? 'open' : 'cycle'
+            const cracks = sampleInterface(m, n, rng, mode, 40)
+            if (!cracks) continue
+            stats[mode].built++
 
-        const colour = colourFromCracks(m, n, cracks)
-        if (!colour || !isValid(colour, m, n)) { stats.inconsistent++; continue }
-        stats[mode].valid++
-        if (!stats[mode].example) stats[mode].example = rowsOf(colour, m, n)
-    }
+            const colour = colourFromCracks(m, n, cracks)
+            if (!colour || !isValid(colour, m, n)) { stats.inconsistent++; continue }
+            stats[mode].valid++
+            if (!stats[mode].example) stats[mode].example = rowsOf(colour, m, n)
+        }
 
-    console.log(
-        `${m}x${n}`.padEnd(10),
-        `${stats.open.built} / ${stats.open.valid}`.padEnd(31),
-        `${stats.cycle.built} / ${stats.cycle.valid}`.padEnd(29),
-        String(stats.inconsistent),
-    )
+        console.log(
+            `${m}x${n}`.padEnd(10),
+            `${stats.open.built} / ${stats.open.valid}`.padEnd(31),
+            `${stats.cycle.built} / ${stats.cycle.valid}`.padEnd(29),
+            String(stats.inconsistent),
+        )
 
-    if (m === n) {
-        for (const mode of ['open', 'cycle']) {
-            if (!stats[mode].example) continue
-            const label = mode === 'open'
-                ? 'open path - both classes are trees'
-                : 'cycle - wrap case (solver handles it since the ring fix)'
-            console.log(`   ${m}x${n} ${label}:`)
-            for (const row of stats[mode].example) console.log('     ' + row)
+        if (m === n) {
+            for (const mode of ['open', 'cycle']) {
+                if (!stats[mode].example) continue
+                const label = mode === 'open'
+                    ? 'open path - both classes are trees'
+                    : 'cycle - wrap case (solver handles it since the ring fix)'
+                console.log(`   ${m}x${n} ${label}:`)
+                for (const row of stats[mode].example) console.log('     ' + row)
+            }
         }
     }
-}
 
 }
