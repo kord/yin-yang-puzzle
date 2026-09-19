@@ -96,4 +96,17 @@ describe('storage', () => {
         saveShared(store, 'ABCdef', { puzzle, userCells, solved: false })
         expect(loadDay(store, 6, '2026-08-29')).toBeNull()
     })
+
+    it('keeps a date solved once it has been solved', () => {
+        // The "permanently solved" property. Regenerating the puzzle for a day
+        // writes a fresh record with solved: false, which must not un-solve it —
+        // the date picker and the size buttons both read the solved list.
+        const store = memoryStorage()
+        saveDay(store, 6, '2026-08-29', { puzzle, userCells, solved: true })
+        saveDay(store, 6, '2026-08-29', { puzzle, userCells, solved: false })
+        expect(getSolvedDates(store, 6)).toEqual(['2026-08-29'])
+        // Recording the same solved date again does not duplicate it.
+        saveDay(store, 6, '2026-08-29', { puzzle, userCells, solved: true })
+        expect(getSolvedDates(store, 6)).toEqual(['2026-08-29'])
+    })
 })

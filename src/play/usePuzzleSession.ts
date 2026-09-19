@@ -13,11 +13,30 @@ import {
     type DayRecord,
 } from '../storage'
 import { useGeneratorWorker } from './useGeneratorWorker'
+import type { PuzzleHistory } from './usePuzzleBoard'
 
 export const SIZES = range(4, 12) // 4x4 .. 12x12
 export const DEFAULT_SIZE = 6
 
 const SAVE_DEBOUNCE_MS = 250
+
+/**
+ * Key identifying a puzzle in the undo/redo store. It includes a fingerprint of
+ * the givens because regenerating a day can produce a different puzzle for the
+ * same date, and a stack from the old board would restore cells that no longer
+ * fit the new one.
+ */
+function historyKeyFor(
+    puzzle: YinYangPuzzleDefinition,
+    date: string,
+    sharedEncoded: string | null,
+): string {
+    if (sharedEncoded) return `shared:${sharedEncoded}`
+    const givens = puzzle.fixedWhites
+        .map((row, r) => row.map((w, c) => (w ? 'w' : puzzle.fixedBlacks[r][c] ? 'b' : '.')).join(''))
+        .join('')
+    return `daily:${date}:${puzzle.size.width}:${givens}`
+}
 
 export interface PuzzleSession {
     size: number
@@ -34,6 +53,14 @@ export interface PuzzleSession {
     cellsRef: MutableRefObject<UserCell[]>
     /** Whether the current board is solved — shared with the board. */
     solvedRef: MutableRefObject<boolean>
+    /**
+     * Undo/redo stacks for every puzzle visited this session, keyed by
+     * `historyKey`. In-memory only, so they start empty on page load, but a puzzle
+     * keeps its own stack while a different one is being played.
+     */
+    historyStore: MutableRefObject<Map<string, PuzzleHistory>>
+    /** Identity of the puzzle on screen, or null while one is loading. */
+    historyKey: string | null
     /** Persist now (daily or shared, whichever this puzzle belongs to). */
     saveNow: () => void
     /** Persist after a short debounce (used for every cell edit). */
@@ -57,6 +84,7 @@ export function usePuzzleSession(shared: SharedPuzzle | null): PuzzleSession {
     const puzzleRef = useRef<YinYangPuzzleDefinition | null>(null)
     const cellsRef = useRef<UserCell[]>([])
     const solvedRef = useRef(false)
+    const historyStore = useRef<Map<string, PuzzleHistory>>(new Map())
     const saveTimerRef = useRef<number | null>(null)
     const sharedRef = useRef<SharedPuzzle | null>(shared ?? null)
     const encodedRef = useRef<string>(shared?.encoded ?? '')
@@ -247,6 +275,14 @@ export function usePuzzleSession(shared: SharedPuzzle | null): PuzzleSession {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
+    // Identity of the puzzle on screen. Only meaningful once the loaded puzzle
+    // matches the selected size: while one generates, `puzzle` is still the
+    // previous puzzle and its key would adopt a stack belonging to another board.
+    const historyKey =
+        puzzle && puzzle.size.width === size
+            ? historyKeyFor(puzzle, date, sharedRef.current ? encodedRef.current : null)
+            : null
+
     return {
         size,
         setSize,
@@ -260,6 +296,8 @@ export function usePuzzleSession(shared: SharedPuzzle | null): PuzzleSession {
         refreshCompletedSizes,
         cellsRef,
         solvedRef,
+        historyStore,
+        historyKey,
         saveNow,
         saveSoon,
     }

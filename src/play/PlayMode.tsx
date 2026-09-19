@@ -26,6 +26,8 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
         refreshCompletedSizes,
         cellsRef,
         solvedRef,
+        historyStore,
+        historyKey,
         saveNow,
         saveSoon,
     } = usePuzzleSession(shared ?? null)
@@ -38,10 +40,19 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
         puzzle,
         cellsRef,
         solvedRef,
+        historyStore,
+        historyKey,
         onEdit: saveSoon,
         onSolved: (c) => {
             setStatus('Solved!')
             setCelebrate(c)
+            // Persist *now*. The solved flag has to survive a closed tab, and
+            // nothing else would save it: the board is read-only once solved, so
+            // no further edit can trigger the debounced save, and the unmount
+            // flush does not run on every kind of navigation. `saveNow` is also
+            // what appends the date to the per-size solved list that the date
+            // picker and size buttons read back.
+            saveNow()
             refreshCompletedSizes()
         },
         onRestore: (solved) => {
@@ -56,13 +67,16 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
         setCelebrate(false)
     }, [puzzle])
 
-    // Undo with Z and reset with R. The board handlers read from refs, so a
-    // single listener installed once stays correct across re-renders.
+    // Undo with Z, redo with Shift+Z, reset with R. The board handlers read from
+    // refs, so a single listener installed once stays correct across re-renders.
+    // Redo is intentionally not advertised anywhere in the UI.
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             const k = e.key.toLowerCase()
-            if (k === 'z' && !e.shiftKey && !e.ctrlKey && !e.metaKey) board.undo()
-            else if (k === 'r' && !e.shiftKey && !e.ctrlKey && !e.metaKey) board.reset()
+            const plain = !e.ctrlKey && !e.metaKey && !e.altKey
+            if (k === 'z' && plain && !e.shiftKey) board.undo()
+            else if (k === 'z' && plain && e.shiftKey) board.redo()
+            else if (k === 'r' && plain && !e.shiftKey) board.reset()
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)

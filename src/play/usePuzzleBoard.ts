@@ -4,6 +4,18 @@ import type { UserCell, YinYangPuzzleDefinition } from '../puzzle/types'
 import { emptyUserCells } from '../storage'
 import { hasMonochrome2x2, isColorConnected } from '../puzzle/rules'
 
+/** One reversible step: the player's cells and the solved flag at that moment. */
+export interface HistoryEntry {
+    cells: UserCell[]
+    solved: boolean
+}
+
+/** Undo/redo stacks for a single puzzle. */
+export interface PuzzleHistory {
+    past: HistoryEntry[]
+    future: HistoryEntry[]
+}
+
 interface BoardOptions {
     /** Grid size (n×n). */
     size: number
@@ -13,34 +25,76 @@ interface BoardOptions {
     cellsRef: MutableRefObject<UserCell[]>
     /** Whether the board is solved — owned by the caller. */
     solvedRef: MutableRefObject<boolean>
+    /**
+     * Per-puzzle undo/redo stacks, keyed by `historyKey`. The caller owns the map
+     * so a puzzle's history survives switching to another puzzle and back. It is
+     * in-memory only, so it starts empty on every page load.
+     */
+    historyStore: MutableRefObject<Map<string, PuzzleHistory>>
+    /** Identity of the puzzle on screen; null while one is loading. */
+    historyKey: string | null
     /** A player edit happened (persist it). */
     onEdit: () => void
     /** The board became a valid solution (`celebrate` is false when resuming). */
     onSolved: (celebrate: boolean) => void
-    /** The board was restored by undo/reset (persist immediately). */
+    /** The board was restored by undo/redo/reset (persist immediately). */
     onRestore: (solved: boolean) => void
 }
 
 export interface PuzzleBoard {
     containerRef: RefObject<HTMLDivElement | null>
     canUndo: boolean
+    canRedo: boolean
     undo: () => void
+    /** The counterpart of undo, bound to Shift+Z only — deliberately unlabelled. */
+    redo: () => void
     reset: () => void
 }
 
 /**
  * Owns the `PuzzleGrid`: mounts it, lays down the given clues and the player's
- * cells, flags 2×2 violations, and provides undo/reset. The caller keeps the
+ * cells, flags 2×2 violations, and provides undo/redo/reset. The caller keeps the
  * cell/solved refs and decides what to do on edit/solve/restore.
  */
 export function usePuzzleBoard(options: BoardOptions): PuzzleBoard {
-    const { size, puzzle, cellsRef, solvedRef, onEdit, onSolved, onRestore } = options
+    const {
+        size,
+        puzzle,
+        cellsRef,
+        solvedRef,
+        historyStore,
+        historyKey,
+        onEdit,
+        onSolved,
+        onRestore,
+    } = options
 
     const containerRef = useRef<HTMLDivElement | null>(null)
     const gridRef = useRef<PuzzleGrid | null>(null)
     const updatingRef = useRef(false)
-    const historyRef = useRef<{ cells: UserCell[]; solved: boolean }[]>([])
+    const historyKeyRef = useRef<string | null>(null)
+    /** Used while no puzzle is loaded, so the handlers never crash on a null key. */
+    const orphanHistoryRef = useRef<PuzzleHistory>({ past: [], future: [] })
+    /** The paint gesture in progress, if any, with the snapshot it will push. */
+    const gestureRef = useRef<{ entry: HistoryEntry; changed: boolean } | null>(null)
     const [canUndo, setCanUndo] = useState(false)
+    const [canRedo, setCanRedo] = useState(false)
+
+    /**
+     * The stacks for the puzzle on screen, created on first use. Reading through
+     * the key each time (rather than caching an array) is what lets a puzzle keep
+     * its history while another one is being played.
+     */
+    function stacks(): PuzzleHistory {
+        const key = historyKeyRef.current
+        if (!key) return orphanHistoryRef.current
+        let history = historyStore.current.get(key)
+        if (!history) {
+            history = { past: [], future: [] }
+            historyStore.current.set(key, history)
+        }
+        return history
+    }
 
     // Mirror the inputs into refs so the imperative handlers stay correct even
     // when captured by long-lived listeners (the keyboard shortcuts).
@@ -57,6 +111,16 @@ export function usePuzzleBoard(options: BoardOptions): PuzzleBoard {
     useEffect(() => {
         handlers.current = { onEdit, onSolved, onRestore }
     })
+
+    // Adopt the stacks belonging to whichever puzzle is now on screen. Nothing is
+    // cleared here — a puzzle that is returned to finds its own history intact.
+    useEffect(() => {
+        historyKeyRef.current = historyKey
+        const history = stacks()
+        setCanUndo(history.past.length > 0)
+        setCanRedo(history.future.length > 0)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [historyKey])
 
     function readCells(): UserCell[] {
         const grid = gridRef.current
@@ -131,10 +195,40 @@ export function usePuzzleBoard(options: BoardOptions): PuzzleBoard {
         handlers.current.onSolved(celebrate)
     }
 
-    function commitHistory() {
-        historyRef.current.push({ cells: cellsRef.current.slice(), solved: solvedRef.current })
-        if (historyRef.current.length > 200) historyRef.current.shift()
+    function pushEntry(entry: HistoryEntry) {
+        const history = stacks()
+        history.past.push(entry)
+        if (history.past.length > 200) history.past.shift()
+        // Editing after undoing abandons the redo branch, as usual for undo/redo.
+        history.future.length = 0
         setCanUndo(true)
+        setCanRedo(false)
+    }
+
+    /** Record the current board as one undoable step. */
+    function commitHistory() {
+        pushEntry({ cells: cellsRef.current.slice(), solved: solvedRef.current })
+    }
+
+    /**
+     * Begin recording a paint gesture. A click-drag changes a cell at a time, but
+     * the drag is one undo step, so the snapshot is taken here — before the first
+     * change — and pushed once, when the pointer is released.
+     */
+    function beginGesture() {
+        gestureRef.current = {
+            entry: { cells: cellsRef.current.slice(), solved: solvedRef.current },
+            changed: false,
+        }
+    }
+
+    function endGesture() {
+        const gesture = gestureRef.current
+        gestureRef.current = null
+        // A press that lands on given/read-only cells changes nothing, so it is not
+        // a step — and it must not discard the redo branch either.
+        if (!gesture || !gesture.changed) return
+        pushEntry(gesture.entry)
     }
 
     function restore(cells: UserCell[], solved = false) {
@@ -167,11 +261,23 @@ export function usePuzzleBoard(options: BoardOptions): PuzzleBoard {
     }
 
     function undo() {
-        const hist = historyRef.current
-        if (!hist.length) return
-        const prev = hist.pop()!
+        const history = stacks()
+        if (!history.past.length) return
+        history.future.push({ cells: cellsRef.current.slice(), solved: solvedRef.current })
+        const prev = history.past.pop()!
         restore(prev.cells, prev.solved)
-        setCanUndo(hist.length > 0)
+        setCanUndo(history.past.length > 0)
+        setCanRedo(true)
+    }
+
+    function redo() {
+        const history = stacks()
+        if (!history.future.length) return
+        history.past.push({ cells: cellsRef.current.slice(), solved: solvedRef.current })
+        const next = history.future.pop()!
+        restore(next.cells, next.solved)
+        setCanUndo(true)
+        setCanRedo(history.future.length > 0)
     }
 
     function reset() {
@@ -197,16 +303,20 @@ export function usePuzzleBoard(options: BoardOptions): PuzzleBoard {
             },
             onStateChange: () => {
                 if (updatingRef.current) return
-                commitHistory()
+                // Mid-drag, only note that the gesture changed something: the step
+                // itself is pushed when the pointer is released, so a drag is one
+                // undo step instead of one per cell crossed.
+                if (gestureRef.current) gestureRef.current.changed = true
+                else commitHistory()
                 checkCompletion()
                 cellsRef.current = readCells()
                 updateViolations()
                 handlers.current.onEdit()
             },
+            onPaintStart: beginGesture,
+            onPaintEnd: endGesture,
         })
         gridRef.current = grid
-        historyRef.current = []
-        setCanUndo(false)
         grid.mount(container)
 
         if (puzzle && puzzle.size.width === size) {
@@ -249,5 +359,5 @@ export function usePuzzleBoard(options: BoardOptions): PuzzleBoard {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [size, puzzle])
 
-    return { containerRef, canUndo, undo, reset }
+    return { containerRef, canUndo, canRedo, undo, redo, reset }
 }

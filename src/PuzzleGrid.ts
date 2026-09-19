@@ -59,6 +59,14 @@ export interface PuzzleGridOptions {
     kinds?: Partial<Record<ElementKind, boolean>>
     /** Called whenever an element's state changes. */
     onStateChange?: (ref: ElementRef, state: ElementState) => void
+    /**
+     * Called when a paint gesture begins (pointer down on a paintable element)
+     * and when it ends (pointer up or cancel). One gesture can change many
+     * elements — a click-drag paints every element it crosses — so callers that
+     * keep history use these to treat the gesture as a single step.
+     */
+    onPaintStart?: () => void
+    onPaintEnd?: () => void
 }
 
 const DEFAULT_STATE: ElementState = 'untouched'
@@ -76,6 +84,8 @@ export class PuzzleGrid {
     private readonly immutableMap: Record<ElementKind, boolean>
     private readonly visibleKinds: Record<ElementKind, boolean>
     private readonly onStateChange?: (ref: ElementRef, state: ElementState) => void
+    private readonly onPaintStart?: () => void
+    private readonly onPaintEnd?: () => void
 
     private readonly states = new Map<string, ElementState>()
     private readonly readonlyCells = new Set<string>()
@@ -121,6 +131,8 @@ export class PuzzleGrid {
             vertex: options.kinds?.vertex ?? true,
         }
         this.onStateChange = options.onStateChange
+        this.onPaintStart = options.onPaintStart
+        this.onPaintEnd = options.onPaintEnd
     }
 
     // -------------------------------------------------------------------------
@@ -309,7 +321,11 @@ export class PuzzleGrid {
 
         container.appendChild(svg)
 
+        // `pointercancel` arrives instead of `pointerup` when the browser takes the
+        // pointer away (a drag released outside the window, a touch interrupted), so
+        // it has to close the gesture too or the next drag would join this one.
         svg.addEventListener('pointerdown', this.onPointerDown)
+        svg.addEventListener('pointercancel', this.onPointerUp)
         svg.addEventListener('contextmenu', this.onContextMenu)
         window.addEventListener('pointermove', this.onPointerMove)
         window.addEventListener('pointerup', this.onPointerUp)
@@ -318,6 +334,7 @@ export class PuzzleGrid {
     destroy(): void {
         if (this.svg) {
             this.svg.removeEventListener('pointerdown', this.onPointerDown)
+            this.svg.removeEventListener('pointercancel', this.onPointerUp)
             this.svg.removeEventListener('contextmenu', this.onContextMenu)
             this.svg.remove()
             this.svg = null
@@ -629,6 +646,7 @@ export class PuzzleGrid {
         const ref = this.refFromTarget(e.target as Element | null)
         if (!ref) return
 
+        this.onPaintStart?.()
         const erase = e.button === 1 || e.ctrlKey || e.metaKey || e.shiftKey
         this.paintState = erase
             ? 'untouched'
@@ -647,8 +665,10 @@ export class PuzzleGrid {
     }
 
     private readonly onPointerUp = () => {
+        if (!this.painting) return
         this.painting = false
         this.lastPaintedId = null
+        this.onPaintEnd?.()
     }
 
     private readonly onContextMenu = (e: Event) => {
