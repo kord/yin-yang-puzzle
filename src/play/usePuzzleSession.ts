@@ -15,8 +15,31 @@ import {
 import { useGeneratorWorker } from './useGeneratorWorker'
 import type { PuzzleHistory } from './usePuzzleBoard'
 
-export const SIZES = range(4, 12) // 4x4 .. 12x12
-export const DEFAULT_SIZE = 6
+export const SIZES = [4, 6, 9, 11, 13, 16] // six puzzles, 4x4 .. 16x16
+/** The size a fresh visitor — or a newly selected date — starts on. */
+export const DEFAULT_SIZE = 4
+
+/**
+ * Every size set that has been in force, oldest first. A day is judged against the
+ * set that was available on it, so revising the list never un-completes a day that
+ * was already finished.
+ */
+const SIZE_SETS: { from: string; sizes: readonly number[] }[] = [
+    { from: '0000-01-01', sizes: range(4, 12) },
+    { from: '2026-09-23', sizes: SIZES },
+]
+
+/** The sizes on offer on a given date. */
+export function sizesOn(date: string): readonly number[] {
+    let sizes: readonly number[] = SIZE_SETS[0].sizes
+    for (const entry of SIZE_SETS) if (date >= entry.from) sizes = entry.sizes
+    return sizes
+}
+
+/** Has every size that existed on `date` been solved that day? */
+export function isDayComplete(date: string): boolean {
+    return sizesOn(date).every((s) => getSolvedDates(localStorage, s).includes(date))
+}
 
 const SAVE_DEBOUNCE_MS = 250
 
@@ -208,19 +231,29 @@ export function usePuzzleSession(shared: SharedPuzzle | null): PuzzleSession {
         }
     }
 
-    /** Silently pre-generate the next-size daily puzzle in the background. */
-    function prefetchNext() {
-        const next = sizeRef.current + 1
-        if (next > SIZES[SIZES.length - 1]) return
+    /**
+     * Silently pre-generate the rest of the day's sizes in the background.
+     *
+     * This used to fetch only the next size up, because a single large puzzle took
+     * long enough that generating the set up front was not worth it. With the
+     * removal loop amortized, the whole day (3x3 through 12x12) costs well under a
+     * second, so every size can be ready and switching sizes never lands on
+     * "Loading puzzle…". Ascending order matters: the cheap sizes land first, so a
+     * request that arrives mid-queue is never stuck behind an expensive one.
+     */
+    function prefetchRest() {
         const d = dateRef.current
-        if (loadDay(localStorage, next, d)) return // already cached
-        post({
-            id: ++prefetchIdRef.current,
-            size: { width: next, height: next },
-            seed: seedFromDateString(d),
-            date: d,
-            prefetch: true,
-        })
+        for (const s of SIZES) {
+            if (s === sizeRef.current) continue // already on screen
+            if (loadDay(localStorage, s, d)) continue // already cached
+            post({
+                id: ++prefetchIdRef.current,
+                size: { width: s, height: s },
+                seed: seedFromDateString(d),
+                date: d,
+                prefetch: true,
+            })
+        }
     }
 
     const post = useGeneratorWorker((message: GenResponse) => {
@@ -251,9 +284,9 @@ export function usePuzzleSession(shared: SharedPuzzle | null): PuzzleSession {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [size])
 
-    // Silently pre-generate the next-size daily puzzle in the background.
+    // Silently pre-generate the rest of the day's sizes in the background.
     useEffect(() => {
-        if (puzzle && !sharedRef.current) prefetchNext()
+        if (puzzle && !sharedRef.current) prefetchRest()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [puzzle, size])
 

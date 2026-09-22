@@ -265,6 +265,39 @@ class YYSolver {
         return this.logicSolutionToYinYangSolution(solution);
     }
 
+    /**
+     * Is there a valid Yin-Yang that keeps every clue in `clues` and gives cell
+     * (row, col) the opposite colour to `white`?
+     *
+     * This is the generator's clue-removal test. With the clue set held fixed, a
+     * second solution must differ from the original somewhere; while the clue set
+     * determines the board uniquely — which the generator maintains inductively —
+     * it can only differ at the cell whose clue is under consideration. Asking
+     * about that one cell therefore decides the question in a single solve, where
+     * `uniqueSolution()` scans every free cell.
+     *
+     * The solver is expected to have been constructed without clues of its own and
+     * to be reused across candidates: the clues arrive here as solve-time
+     * assumptions, so one model build serves the whole loop. `(row, col)` is itself
+     * expected to be in `clues`, and is skipped in favour of the flipped literal.
+     */
+    public hasAlternativeSolution(
+        clues: readonly { row: number; col: number; white: boolean }[],
+        row: number,
+        col: number,
+        white: boolean,
+    ): boolean {
+        const assumptions: Logic.Term[] = [
+            white ? Logic.not(this.getCellVar(row, col)) : this.getCellVar(row, col),
+        ];
+        for (const clue of clues) {
+            if (clue.row === row && clue.col === col) continue;
+            const v = this.getCellVar(clue.row, clue.col);
+            assumptions.push(clue.white ? v : Logic.not(v));
+        }
+        return this.solveConnected(Logic.and(...assumptions)) !== null;
+    }
+
     /** The model as a plain grid (true = white). */
     private solutionToGrid(solution: Logic.Solution): boolean[][] {
         const { height, width } = this.puzzle.size;

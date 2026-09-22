@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { SharedPuzzle } from '../puzzle/types'
 import { dailyDate } from '../puzzle/seed'
-import { getSolvedDates } from '../storage'
-import { SIZES, usePuzzleSession } from './usePuzzleSession'
+import { isDayComplete, SIZES, usePuzzleSession } from './usePuzzleSession'
 import { usePuzzleBoard } from './usePuzzleBoard'
 import Confetti from '../Confetti'
 import MonthPicker from '../MonthPicker'
@@ -123,7 +122,7 @@ function PlayMode({ shared }: { shared?: SharedPuzzle | null }) {
                             max={dailyDate()}
                             disabled={generating}
                             onSelect={selectDate}
-                            isCompleted={(d) => SIZES.every((s) => getSolvedDates(localStorage, s).includes(d))}
+                            isCompleted={isDayComplete}
                         />
                     </div>
                 )}
