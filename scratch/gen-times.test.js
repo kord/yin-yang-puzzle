@@ -17,7 +17,9 @@ const SIZES = (process.env.GEN_TIMES_SIZES || '4,5,6,7,8,9,10,11,12,13,14,15,16'
     .split(',')
     .map(Number)
 
-const JSON_OUT = new URL('./gen-times.json', import.meta.url)
+// Separate file per run so a pilot at the large sizes cannot clobber the data the
+// figure is drawn from.
+const JSON_OUT = new URL(`./${process.env.GEN_TIMES_OUT || 'gen-times.json'}`, import.meta.url)
 
 /** Distinct seeds, in the same shape the app uses for a daily puzzle. */
 const seedFor = (n, i) => {
@@ -27,8 +29,11 @@ const seedFor = (n, i) => {
 }
 
 const summarise = (times) => {
+    if (!times.length) return { mean: null, sd: null, min: null, max: null }
     const mean = times.reduce((a, b) => a + b, 0) / times.length
-    const variance = times.reduce((a, t) => a + (t - mean) ** 2, 0) / (times.length - 1)
+    const variance = times.length > 1
+        ? times.reduce((a, t) => a + (t - mean) ** 2, 0) / (times.length - 1)
+        : 0
     return {
         mean: Math.round(mean * 100) / 100,
         sd: Math.round(Math.sqrt(variance) * 100) / 100,
@@ -55,17 +60,43 @@ describe.runIf(ENABLED)('generation times by size', () => {
 
         for (const n of SIZES) {
             const times = []
+            const abortedSeeds = []
+            let poisoned = false
             for (let i = 0; i < SAMPLES; i++) {
+                const seed = seedFor(n, i)
                 const t0 = performance.now()
-                generateRandomPuzzle({ width: n, height: n }, seedFor(n, i))
-                times.push(Math.round((performance.now() - t0) * 10) / 10)
+                try {
+                    generateRandomPuzzle({ width: n, height: n }, seed)
+                    times.push(Math.round((performance.now() - t0) * 10) / 10)
+                } catch (err) {
+                    abortedSeeds.push(i)
+                    const elapsed = performance.now() - t0
+                    // Emscripten's abort() poisoning the runtime shows up as an
+                    // instant failure on the very next attempt. If that happens the
+                    // module is dead and the remaining samples are unreachable —
+                    // which is also exactly what a daily prefetch would leave behind.
+                    if (abortedSeeds.length > 1 && elapsed < 5) {
+                        poisoned = true
+                        break
+                    }
+                    void err
+                }
             }
             const stats = summarise(times)
-            result.sizes.push({ n, times, ...stats })
+            result.sizes.push({
+                n,
+                times,
+                errors: abortedSeeds.length,
+                abortedSeeds,
+                poisoned,
+                ...stats,
+            })
             writeFileSync(JSON_OUT, JSON.stringify(result, null, 2))
             console.log(`${n}x${n}`.padEnd(8),
+                `n=${String(times.length).padStart(2)}  ` +
                 `mean ${String(stats.mean).padStart(9)} ms  sd ${String(stats.sd).padStart(9)} ms  ` +
-                `min ${String(stats.min).padStart(8)}  max ${String(stats.max).padStart(9)}`)
+                `min ${String(stats.min).padStart(8)}  max ${String(stats.max).padStart(9)}` +
+                (abortedSeeds.length ? `  ABORTED ${abortedSeeds.length}${poisoned ? ' (module dead)' : ''}` : ''))
         }
         writeFileSync(JSON_OUT, JSON.stringify(result, null, 2))
     }, 7_200_000)

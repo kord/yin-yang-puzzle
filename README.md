@@ -212,37 +212,46 @@ actually hand a player. The line is the mean, bars are ±1 standard deviation, a
 are the individual samples. The y-axis is logarithmic because the range spans three orders of
 magnitude. The brown sizes are the six a day is offered at.
 
-Up to 12×12 the curve is close to linear in the number of cells and the spread is tight — 343 ms
-mean at 12×12, worst case 779 ms. Above that the generator has to rebuild its solver periodically
+Up to 12×12 the curve is close to linear in the number of cells and the spread is tight — 317 ms
+mean at 12×12, worst case 699 ms. Above that the generator has to rebuild its solver periodically
 to stay inside the fixed 64 MiB wasm heap, and a rebuild throws away the learned clauses that make
-the loop fast: 13×13 goes to 1.5 s and 14×14 to 10 s, with the spread exploding alongside. The
-means stop being monotone — 15×15 averages less than 14×14 — precisely because a handful of boards
-dominate each one.
+the loop fast. The mean jumps roughly four-fold at the boundary and then keeps climbing as the
+spread explodes with it; the means are not even monotone, since a handful of boards dominate each
+one.
 
-| size | mean (ms) | SD (ms) | min (ms) | max (ms) |
-|---|---|---|---|---|
-| 4x4 | 18.2 | 4.9 | 14.4 | 30.6 |
-| 5x5 | 30.2 | 8.7 | 20.9 | 49.7 |
-| 6x6 | 34.6 | 7.5 | 29.1 | 57.4 |
-| 7x7 | 45.2 | 8.9 | 37.8 | 78.7 |
-| 8x8 | 70.1 | 19.1 | 53.8 | 133.2 |
-| 9x9 | 103.1 | 33.7 | 75.7 | 213.7 |
-| 10x10 | 223.8 | 350.3 | 90.8 | 1690.0 |
-| 11x11 | 223.2 | 193.3 | 132.1 | 1014.1 |
-| 12x12 | 343.4 | 170.0 | 164.7 | 778.9 |
-| 13x13 | 1467.1 | 2258.7 | 331.6 | 9826.3 |
-| 14x14 | 10160.5 | 20402.8 | 542.0 | 72819.1 |
-| 15x15 | 4525.8 | 5389.2 | 580.5 | 20680.5 |
+| size | samples | aborted | mean (ms) | SD (ms) | min (ms) | max (ms) |
+|---|---|---|---|---|---|---|
+| 4x4 | 20 | 0 | 16.8 | 4.3 | 13.3 | 28.6 |
+| 5x5 | 20 | 0 | 27.7 | 8.2 | 19.0 | 46.6 |
+| 6x6 | 20 | 0 | 31.8 | 6.9 | 27.4 | 52.9 |
+| 7x7 | 20 | 0 | 41.3 | 8.2 | 35.3 | 71.8 |
+| 8x8 | 20 | 0 | 64.0 | 17.0 | 49.4 | 120.9 |
+| 9x9 | 20 | 0 | 94.1 | 32.3 | 69.4 | 202.6 |
+| 10x10 | 20 | 0 | 206.5 | 328.0 | 81.5 | 1578.5 |
+| 11x11 | 20 | 0 | 202.0 | 173.5 | 119.1 | 912.1 |
+| 12x12 | 20 | 0 | 317.4 | 153.7 | 152.5 | 698.8 |
+| 13x13 | 20 | 0 | 1279.5 | 1873.3 | 307.2 | 8194.8 |
+| 14x14 | 20 | 0 | 9003.8 | 18063.5 | 493.8 | 64696.3 |
+| 15x15 | 20 | 0 | 4059.9 | 4817.4 | 538.8 | 18583.9 |
+| 16x16 | 19 | 1 | 5060.0 | 7643.6 | 963.5 | 33299.1 |
+| 17x17 | 19 | 1 | 5244.6 | 9689.9 | 955.4 | 44712.9 |
+| 18x18 | 17 | 3 | 7651.4 | 7157.2 | 1780.2 | 27117.6 |
+| 19x19 | 15 | 5 | 10335.3 | 7716.3 | 2405.9 | 29632.4 |
+| 20x20 | 14 | 6 | 11679.9 | 8904.0 | 2356.9 | 30178.7 |
 
-16×16 is not on the chart because it is not measurable with this encoding: on some seeds the
-solver's heap aborts outright (`enlargeMemory`) instead of growing. That is the practical ceiling
-of the current constraint encoding, and the concrete reason a leaner formulation — native
-cardinality and pseudo-Boolean constraints instead of adder circuits — is the next thing worth
-doing.
+Every size still generates, including 20×20, but the failures climb with size: none at all up to
+15×15, one in twenty at 16×16 and 17×17, three at 18×18, five at 19×19 and six at 20×20 — so a
+third of attempts at the largest size die in `enlargeMemory`, the fixed heap aborting rather than
+growing. Each failure is independent (every attempt builds its own solver, and the module recovers
+afterwards), so the cost is one lost generation rather than a dead worker. A rising hard-failure
+rate underneath an exploding spread is the practical ceiling of the current constraint encoding,
+and the concrete reason a leaner formulation — native cardinality and pseudo-Boolean constraints
+instead of adder circuits — is the next thing worth doing.
 
 Measured in Node on Windows. Absolute times are machine-dependent; the shape of the curve and the
-size of the spread are not. Regenerate with `scratch/gen-times.test.js` (gated by `GEN_TIMES`) and
-`scratch/plot-gen-times.py`.
+size of the spread are not. Regenerate with `scratch/gen-times.test.js` (gated by `GEN_TIMES`;
+`GEN_TIMES_OUT` picks the output file, which is how the sizes above 16 were measured separately) and
+`scratch/plot-gen-times.py`, which merges both files.
 
 ## Open problems that land on this codebase
 
