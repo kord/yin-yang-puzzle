@@ -42,7 +42,8 @@
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --bg: #1b1310;
+  /* Pure black, so the wooden board reads as the only lit thing on the page. */
+  --bg: #000000;
   --surface: #2b1f1f;
   --surface-raised: #3b3131;
   --surface-raised-hover: #584949;
